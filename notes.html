@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Notes — BCS 3A</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&family=Lora:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+<div class="noise"></div>
+<div id="read-prog"><div id="read-prog-fill"></div></div>
+
+<nav class="topnav">
+  <div class="nav-brand"><span class="brand-dot"></span><div><span class="brand-title">BCS 3A</span><span class="brand-sub">COMSATS University</span></div></div>
+  <div class="nav-links">
+    <a href="index.html" class="nav-link">Dashboard</a>
+    <a href="notes.html" class="nav-link active">Notes</a>
+    <a href="quiz.html" class="nav-link">Quiz</a>
+    <a href="flashcards.html" class="nav-link">Flashcards</a>
+    <a href="admin.html" class="nav-link nav-admin">Admin</a>
+  </div>
+  <span class="sync-pill" id="syncStatus"></span>
+  <button class="hamburger" onclick="toggleMobileNav()">☰</button>
+</nav>
+<div class="mobile-nav" id="mobileNav">
+  <a href="index.html">Dashboard</a><a href="notes.html">Notes</a>
+  <a href="quiz.html">Quiz</a><a href="flashcards.html">Flashcards</a><a href="admin.html">Admin</a>
+</div>
+
+<main class="wrap" style="padding-top:1.5rem;padding-bottom:1rem">
+  <div class="notes-layout" id="notesLayout">
+    <!-- Sidebar -->
+    <div class="sidebar" id="notesSidebar">
+      <div class="sb-title">Courses & Topics</div>
+      <input type="text" class="sb-search" id="sbSearch" placeholder="🔍 Search topics…" oninput="filterSidebar()">
+      <div id="courseList"><p style="font-size:12px;color:var(--text3);padding:8px 1rem">Loading…</p></div>
+    </div>
+    <!-- Reader -->
+    <div class="reader-pane" id="readerPane">
+      <div class="reader-placeholder" id="readerPlaceholder">
+        <span class="big-icon">📖</span>
+        <h3>Select a topic to read</h3>
+        <p>Choose a course from the sidebar, then pick a topic.</p>
+        <p style="margin-top:8px;font-size:12px;color:var(--text3)">✓ = topics you've already read</p>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- Table of Contents -->
+<div class="toc-panel" id="tocPanel">
+  <div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:8px;font-weight:700">Contents</div>
+  <div id="tocList"></div>
+</div>
+
+<!-- AI Ask FAB -->
+<button class="ai-fab" id="aiFab" onclick="openAsk()" title="Ask AI (Ctrl+/)">✦</button>
+
+<!-- AI Ask Panel -->
+<div class="ai-ask-panel" id="aiPanel">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+    <span style="font-size:13px;font-weight:700;color:var(--accent2)">✦ Ask AI about this topic</span>
+    <button onclick="closeAsk()" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:18px">✕</button>
+  </div>
+  <textarea id="askInput" rows="2" placeholder="e.g. Explain this in simpler terms…" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text);padding:9px 12px;font-family:var(--font-body);font-size:13px;outline:none;resize:none;margin-bottom:8px"></textarea>
+  <div style="display:flex;gap:6px">
+    <button class="btn btn-primary btn-sm" style="flex:1" onclick="doAsk()">Ask</button>
+    <button class="btn btn-ghost btn-sm" onclick="doAsk('explain')">Explain</button>
+    <button class="btn btn-ghost btn-sm" onclick="doAsk('summarize')">Summary</button>
+  </div>
+  <div class="ai-ask-resp" id="askResp"></div>
+  <p style="font-size:10px;color:var(--text3);margin-top:8px">Needs Gemini API key in Admin → Settings</p>
+</div>
+
+<!-- Full-Screen Reading Overlay -->
+<div class="fs-overlay" id="fsOverlay">
+  <div class="fs-topbar">
+    <span class="brand-dot"></span>
+    <span class="fs-title" id="fsTitle">Reading</span>
+    <div style="display:flex;gap:6px;align-items:center;margin-left:auto">
+      <div class="font-ctrl">
+        <button onclick="fsFont(-1)">A−</button>
+        <span id="fsFontLbl">17px</span>
+        <button onclick="fsFont(1)">A+</button>
+      </div>
+      <button class="mode-btn" onclick="toggleFsMode()">Focus</button>
+      <button class="btn btn-ghost btn-sm" onclick="closeFull()">✕ Exit</button>
+    </div>
+  </div>
+  <div style="position:relative;flex:1;overflow:hidden">
+    <div class="fs-prog" id="fsProg"></div>
+    <div class="fs-body" id="fsBody" onscroll="updateFsProgress()"></div>
+  </div>
+</div>
+
+<footer class="footer"><p>BCS Section A · 3rd Semester · COMSATS University Islamabad</p></footer>
+<div id="_toasts"></div>
+
+<script src="js/data.js"></script>
+<script>
+let _course = null, _topic = null, _noteData = null;
+let _fontSize = parseInt(localStorage.getItem('note_fs') || '16');
+let _mode = localStorage.getItem('note_mode') || 'normal';
+let _fsFont = parseInt(localStorage.getItem('fs_font') || '17');
+let _tocOpen = false;
+
+function onDataLoaded() { buildSidebar(); }
+
+// ── Sidebar ───────────────────────────────────────────────────────────────────
+function buildSidebar() {
+  const list = document.getElementById('courseList');
+  const pre  = new URLSearchParams(location.search).get('course');
+  list.innerHTML = '';
+  APP_DATA.courses.forEach(c => {
+    const notes   = APP_DATA.notes[c.id] || {};
+    const topics  = Object.keys(notes);
+    const readCnt = getReadList(c.id).filter(t => topics.includes(t)).length;
+    const pct     = topics.length ? Math.round(readCnt/topics.length*100) : 0;
+
+    const wrap = document.createElement('div');
+    const btn  = document.createElement('button');
+    btn.className = 'sb-course';
+    btn.dataset.course = c.id;
+    btn.innerHTML = `<div class="sb-course-row"><span>${c.icon} ${c.short}</span><span style="font-size:10px;color:var(--text3)">${readCnt}/${topics.length}</span></div><div style="height:2px;background:var(--bg4);border-radius:1px;margin-top:4px;overflow:hidden"><div style="height:100%;width:${pct}%;background:var(--accent);border-radius:1px"></div></div>`;
+    btn.onclick = () => {
+      document.querySelectorAll('.sb-course').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const sg = list.querySelector(`.topic-group[data-course="${c.id}"]`);
+      if (sg) sg.style.display = sg.style.display === 'none' ? '' : 'none';
+      _course = c;
+      if (!topics.length) showEmpty(c);
+    };
+    wrap.appendChild(btn); list.appendChild(wrap);
+
+    const grp = document.createElement('div');
+    grp.className = 'topic-group'; grp.dataset.course = c.id;
+    topics.forEach(topic => {
+      const sub = document.createElement('button');
+      const done = isRead(c.id, topic);
+      sub.className = 'sb-topic' + (done ? ' done' : '');
+      sub.dataset.topic = topic.toLowerCase();
+      sub.innerHTML = `<span style="flex:1;text-align:left">${topic}</span>`;
+      sub.onclick = () => {
+        document.querySelectorAll('.sb-topic').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.sb-course').forEach(b => b.classList.remove('active'));
+        sub.classList.add('active'); btn.classList.add('active');
+        _course = c; _topic = topic;
+        localStorage.setItem('last_course', c.id);
+        localStorage.setItem('last_topic', topic);
+        openNote(c, topic, notes[topic]);
+      };
+      grp.appendChild(sub);
+    });
+    list.appendChild(grp);
+
+    if (pre === c.id) { btn.click(); if (topics.length) grp.querySelector('.sb-topic')?.click(); }
+  });
+}
+
+function filterSidebar() {
+  const q = document.getElementById('sbSearch').value.toLowerCase();
+  document.querySelectorAll('.topic-group').forEach(grp => {
+    let any = false;
+    grp.querySelectorAll('.sb-topic').forEach(s => {
+      const m = !q || s.dataset.topic.includes(q);
+      s.style.display = m ? '' : 'none'; if(m) any=true;
+    });
+    const h = document.querySelector(`.sb-course[data-course="${grp.dataset.course}"]`)?.parentElement;
+    if(h) h.style.display = any||!q ? '' : 'none';
+  });
+}
+
+function showEmpty(c) {
+  document.getElementById('readerPane').innerHTML = `<div class="reader-placeholder"><span class="big-icon">${c.icon}</span><h3>${c.short} notes coming soon</h3><p>No notes uploaded yet for this course.</p></div>`;
+  document.getElementById('aiFab').style.display = 'none';
+}
+
+// ── Open Note ─────────────────────────────────────────────────────────────────
+function openNote(course, topic, data) {
+  if (!data) { showEmpty(course); return; }
+  _noteData = data; _course = course; _topic = topic;
+
+  const md   = data.markdown || data.raw || '';
+  const body = renderMarkdown(md);
+  const read = isRead(course.id, topic);
+
+  // Resources
+  const res = (APP_DATA.resources?.[course.id]||[]).filter(r=>!r.topic||r.topic===topic);
+  const resHtml = res.length ? `<div class="reader-resources">
+    <p style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:8px;font-weight:700">📎 Resources & Past Papers</p>
+    <div class="res-list">${res.map(r=>`<a href="${r.url}" target="_blank" class="res-item">
+      <span style="font-size:20px">${{pdf:'📄',video:'🎥',pastpaper:'📋',slides:'📊',doc:'📝'}[r.type]||'🔗'}</span>
+      <div><div style="font-size:13px;font-weight:500">${r.title}</div><div style="font-size:11px;color:var(--text3)">${r.type.toUpperCase()}</div></div>
+      <span style="margin-left:auto;font-size:11px;color:var(--text3)">↗</span>
+    </a>`).join('')}</div></div>` : '';
+
+  // Quiz/FC prompt
+  const qc = (APP_DATA.quizzes[course.id]||[]).filter(q=>q.topic===topic).length;
+  const fc = (APP_DATA.flashcards[course.id]||[]).filter(f=>f.topic===topic).length;
+  const qHtml = (qc||fc) ? `<div class="quiz-prompt">
+    <div style="font-size:14px">${qc?`<strong style="color:var(--accent2)">${qc} MCQs</strong>`:''} ${qc&&fc?'·':''} ${fc?`<strong style="color:var(--accent2)">${fc} flashcards</strong>`:''} available for this topic</div>
+    <div style="display:flex;gap:8px">
+      ${qc?`<a href="quiz.html" class="btn btn-ghost btn-sm">Practice →</a>`:''}
+      ${fc?`<a href="flashcards.html" class="btn btn-ghost btn-sm">Flashcards →</a>`:''}
+    </div>
+  </div>` : '';
+
+  const pane = document.getElementById('readerPane');
+  pane.innerHTML = `
+    <div class="read-toolbar">
+      <span class="tag tag-${course.color}">${course.short}</span>
+      <span style="font-size:13px;font-weight:600;margin-right:4px">${topic}</span>
+      <div class="read-toolbar-right">
+        <div class="font-ctrl">
+          <button onclick="changeFont(-1)">A−</button>
+          <span id="fontLbl">${_fontSize}px</span>
+          <button onclick="changeFont(1)">A+</button>
+        </div>
+        <button class="mode-btn ${_mode==='normal'?'active':''}" onclick="setMode('normal')">Normal</button>
+        <button class="mode-btn ${_mode==='focus'?'active':''}" onclick="setMode('focus')">Focus</button>
+        <button class="mode-btn" id="tocBtn" onclick="toggleToc()">Contents</button>
+        <button class="btn btn-ghost btn-sm" onclick="openFull()">⛶ Full Screen</button>
+        <button class="btn btn-ghost btn-sm" onclick="copyNote()">📋</button>
+        <button class="btn ${read?'btn-success':'btn-primary'} btn-sm" id="readBtn" onclick="toggleRead()">
+          ${read?'✅ Done':'○ Mark Read'}
+        </button>
+      </div>
+    </div>
+    <div style="padding:8px 1.5rem;border-bottom:1px solid var(--border);font-size:12px;color:var(--text3)">
+      ${course.name} · ${course.teacher} · Exam: ${formatDate(course.examDate)}
+    </div>
+    <div class="reading-content mode-${_mode}" id="readContent" style="--rs-size:${_fontSize}px">
+      <div class="note-hero">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:.5rem"><span class="tag tag-${course.color}">${course.short}</span></div>
+        <h1 class="note-hero-title">${topic}</h1>
+        ${data.summary ? `<p style="font-size:15px;color:var(--text2);line-height:1.7;padding:12px 16px;background:var(--bg2);border-left:3px solid var(--accent);border-radius:0 8px 8px 0;font-style:italic">${data.summary}</p>` : ''}
+      </div>
+      ${body}
+      ${resHtml}
+      ${qHtml}
+    </div>`;
+
+  buildToc();
+  initProgress();
+  document.getElementById('aiFab').style.display = 'flex';
+
+  // Auto-mark read after 30s
+  if (!read) {
+    const tm = setTimeout(() => {
+      if (_topic===topic && _course?.id===course.id) {
+        markRead(course.id, topic);
+        const btn = document.getElementById('readBtn');
+        if(btn){btn.textContent='✅ Done';btn.className='btn btn-success btn-sm';}
+        buildSidebar(); reactivate(course,topic);
+      }
+    }, 30000);
+    pane._autoReadTimer = tm;
+  }
+}
+
+// ── ToC ───────────────────────────────────────────────────────────────────────
+function buildToc() {
+  const list = document.getElementById('tocList');
+  list.innerHTML = '';
+  document.querySelectorAll('#readContent .note-h1,.note-h2').forEach(el => {
+    const btn = document.createElement('button');
+    btn.className = 'toc-item' + (el.classList.contains('note-h2')?' toc-h2':'');
+    btn.textContent = el.textContent.slice(0,42);
+    btn.onclick = () => el.scrollIntoView({behavior:'smooth',block:'start'});
+    list.appendChild(btn);
+  });
+}
+function toggleToc() { _tocOpen=!_tocOpen; document.getElementById('tocPanel').classList.toggle('open',_tocOpen); }
+
+// ── Progress ──────────────────────────────────────────────────────────────────
+function initProgress() {
+  const pane = document.getElementById('readerPane');
+  const fill = document.getElementById('read-prog-fill');
+  pane.onscroll = () => {
+    const {scrollTop,scrollHeight,clientHeight} = pane;
+    fill.style.width = Math.round(scrollTop/(scrollHeight-clientHeight)*100||0)+'%';
+  };
+}
+
+// ── Font & Mode ───────────────────────────────────────────────────────────────
+function changeFont(d) {
+  _fontSize = Math.max(13,Math.min(22,_fontSize+d));
+  localStorage.setItem('note_fs',_fontSize);
+  const c=document.getElementById('readContent');
+  if(c) c.style.setProperty('--rs-size',_fontSize+'px');
+  const l=document.getElementById('fontLbl'); if(l) l.textContent=_fontSize+'px';
+}
+function setMode(m) {
+  _mode=m; localStorage.setItem('note_mode',m);
+  const c=document.getElementById('readContent');
+  if(c) c.className='reading-content mode-'+m;
+  document.querySelectorAll('.mode-btn').forEach(b=>b.classList.toggle('active',b.textContent===m.charAt(0).toUpperCase()+m.slice(1)));
+}
+
+// ── Full Screen ───────────────────────────────────────────────────────────────
+function openFull() {
+  if (!_topic) return;
+  document.getElementById('fsTitle').textContent = _topic;
+  const body = document.getElementById('fsBody');
+  const md   = _noteData?.markdown || _noteData?.raw || '';
+  body.innerHTML = `<div style="font-family:var(--font-read);font-size:${_fsFont}px;line-height:2;max-width:680px;margin:0 auto;color:#d8d8f0">${renderMarkdown(md)}</div>`;
+  document.getElementById('fsOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeFull() {
+  document.getElementById('fsOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+function fsFont(d) {
+  _fsFont = Math.max(13,Math.min(24,_fsFont+d));
+  localStorage.setItem('fs_font',_fsFont);
+  document.getElementById('fsFontLbl').textContent = _fsFont+'px';
+  const el = document.querySelector('#fsBody div');
+  if(el) el.style.fontSize = _fsFont+'px';
+}
+let _fsFocus = false;
+function toggleFsMode() {
+  _fsFocus=!_fsFocus;
+  const el=document.querySelector('#fsBody div');
+  if(el) el.style.fontFamily=_fsFocus?'var(--font-read)':'var(--font-body)';
+  document.querySelector('.fs-topbar .mode-btn').classList.toggle('active',_fsFocus);
+}
+function updateFsProgress() {
+  const b=document.getElementById('fsBody');
+  const pct=(b.scrollTop/(b.scrollHeight-b.clientHeight)||0);
+  document.getElementById('fsProg').style.scale=`${pct} 1`;
+}
+document.addEventListener('keydown', e => {
+  if (e.key==='Escape') { closeFull(); closeAsk(); document.getElementById('tocPanel').classList.remove('open'); _tocOpen=false; }
+  if ((e.ctrlKey||e.metaKey)&&e.key==='/') { e.preventDefault(); openAsk(); }
+});
+
+// ── AI Ask ────────────────────────────────────────────────────────────────────
+function openAsk() { document.getElementById('aiPanel').classList.add('open'); document.getElementById('aiFab').style.display='none'; document.getElementById('askInput').focus(); }
+function closeAsk() { document.getElementById('aiPanel').classList.remove('open'); if(_topic) document.getElementById('aiFab').style.display='flex'; }
+async function doAsk(preset) {
+  if (!_topic) return showToast('Open a topic first','error');
+  const inp  = document.getElementById('askInput');
+  const resp = document.getElementById('askResp');
+  let q = inp.value.trim();
+  if (preset==='explain')   q=`Explain "${_topic}" in simple, clear terms for a CS student.`;
+  if (preset==='summarize') q=`Give 5 bullet points of the most important things about "${_topic}" for exams.`;
+  if (!q) return showToast('Type a question first','error');
+  resp.style.display='block';
+  resp.innerHTML='<span class="ai-spinner"></span> Asking Gemini…';
+  const ctx = JSON.stringify(_noteData||{}).slice(0,1500);
+  try {
+    const ans = await geminiAsk(`You are a study assistant for a CS student.\nTopic: "${_topic}"\nNotes summary: ${ctx}\n\nQuestion: "${q}"\n\nAnswer clearly in 2-5 sentences. Use bullet points if helpful.`);
+    resp.textContent = ans;
+  } catch(e) {
+    resp.innerHTML = `<span style="color:var(--red)">❌ ${e.message}</span>`;
+  }
+}
+
+// ── Actions ───────────────────────────────────────────────────────────────────
+function toggleRead() {
+  if (!_course||!_topic) return;
+  isRead(_course.id,_topic) ? unmarkRead(_course.id,_topic) : markRead(_course.id,_topic);
+  const r=isRead(_course.id,_topic);
+  const btn=document.getElementById('readBtn');
+  if(btn){btn.textContent=r?'✅ Done':'○ Mark Read';btn.className=`btn ${r?'btn-success':'btn-primary'} btn-sm`;}
+  buildSidebar(); reactivate(_course,_topic);
+}
+function reactivate(c,t) {
+  document.querySelectorAll('.sb-course').forEach(b=>{if(b.dataset.course===c.id)b.classList.add('active');});
+  document.querySelectorAll('.sb-topic').forEach(b=>{if(b.dataset.topic===t?.toLowerCase())b.classList.add('active');});
+}
+function copyNote() {
+  const c=document.getElementById('readContent');
+  if(!c) return;
+  navigator.clipboard.writeText(c.innerText.trim()).then(()=>showToast('Copied!'));
+}
+
+buildSidebar();
+</script>
+</body>
+</html>

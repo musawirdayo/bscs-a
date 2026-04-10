@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz — BCS 3A</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/main.css">
+<style>
+.quiz-filter-row { display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1rem;align-items:center }
+.filter-pill {
+  padding:5px 14px;background:var(--bg2);border:1px solid var(--border2);
+  border-radius:20px;font-size:12px;color:var(--text2);cursor:pointer;
+  font-family:var(--font-body);transition:all .2s
+}
+.filter-pill:hover,.filter-pill.active { background:var(--accent-dim);border-color:rgba(108,99,255,.4);color:var(--accent2) }
+.filter-pill.diff-easy  { --c:var(--green);  background:var(--green-dim);  border-color:rgba(34,197,94,.3);  color:var(--green)  }
+.filter-pill.diff-medium{ --c:var(--amber);  background:var(--amber-dim);  border-color:rgba(245,158,11,.3); color:var(--amber) }
+.filter-pill.diff-hard  { --c:var(--red);    background:var(--red-dim);    border-color:rgba(239,68,68,.3);  color:var(--red)   }
+.filter-pill.diff-easy.active,.filter-pill.diff-medium.active,.filter-pill.diff-hard.active { opacity:1;box-shadow:0 0 0 2px var(--c) }
+
+.empty-state { text-align:center;padding:4rem 1.5rem;color:var(--text2) }
+.empty-state .big-icon { font-size:48px;display:block;margin-bottom:1rem;opacity:.4 }
+.empty-state h3 { font-size:18px;color:var(--text);margin-bottom:6px }
+
+.q-bookmark { background:none;border:none;cursor:pointer;color:var(--text3);font-size:16px;padding:0;transition:color .2s;line-height:1 }
+.q-bookmark:hover,.q-bookmark.active { color:var(--amber) }
+.q-card-header { display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px }
+
+.results-topic-table { width:100%;border-collapse:collapse;font-size:13px;margin-top:1rem }
+.results-topic-table th { color:var(--text3);font-weight:500;padding:8px 10px;border-bottom:1px solid var(--border);text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.06em }
+.results-topic-table td { padding:8px 10px;border-bottom:1px solid var(--border) }
+.results-topic-table tr:last-child td { border-bottom:none }
+</style>
+</head>
+<body>
+<div class="noise"></div>
+
+<nav class="topnav">
+  <div class="nav-brand">
+    <span class="brand-dot"></span>
+    <div><span class="brand-title">BCS 3A</span><span class="brand-sub">COMSATS University</span></div>
+  </div>
+  <div class="nav-links">
+    <a href="index.html" class="nav-link">Dashboard</a>
+    <a href="notes.html" class="nav-link">Notes</a>
+    <a href="quiz.html"  class="nav-link active">Quiz</a>
+    <a href="flashcards.html" class="nav-link">Flashcards</a>
+    <a href="admin.html" class="nav-link nav-admin">Admin</a>
+  </div>
+  <span class="sync-pill" id="syncStatus"></span>
+  <button class="hamburger" onclick="toggleMobileNav()">☰</button>
+</nav>
+<div class="mobile-nav" id="mobileNav">
+  <a href="index.html">Dashboard</a><a href="notes.html">Notes</a>
+  <a href="quiz.html">Quiz</a><a href="flashcards.html">Flashcards</a>
+  <a href="admin.html">Admin</a>
+</div>
+
+<main class="main-container">
+  <div class="page-header">
+    <h1 class="page-title">Practice Quiz</h1>
+    <p class="page-sub">AI-generated MCQs · Answer all, then review your score and topic breakdown.</p>
+  </div>
+
+  <div class="quiz-layout">
+    <!-- Course tabs -->
+    <div class="course-tabs" id="quizCourseTabs"></div>
+
+    <!-- Filters -->
+    <div class="quiz-filter-row" id="filterRow">
+      <span style="font-size:12px;color:var(--text3)">Filter:</span>
+      <button class="filter-pill active" data-filter="all" onclick="setFilter('all',this)">All</button>
+      <button class="filter-pill diff-easy" data-filter="easy" onclick="setFilter('easy',this)">Easy</button>
+      <button class="filter-pill diff-medium" data-filter="medium" onclick="setFilter('medium',this)">Medium</button>
+      <button class="filter-pill diff-hard" data-filter="hard" onclick="setFilter('hard',this)">Hard</button>
+      <button class="filter-pill" data-filter="bookmarked" onclick="setFilter('bookmarked',this)">⭐ Bookmarked</button>
+      <div style="margin-left:auto;display:flex;gap:6px">
+        <button class="btn btn-ghost btn-sm" onclick="shuffleQuestions()">🔀 Shuffle</button>
+        <button class="btn btn-ghost btn-sm" id="topicFilterBtn" onclick="toggleTopicDropdown()">📂 Topic ▾</button>
+      </div>
+    </div>
+    <div id="topicDropdown" style="display:none;margin-bottom:8px;padding:10px;background:var(--bg2);border:1px solid var(--border2);border-radius:8px">
+      <div id="topicFilterList" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+    </div>
+
+    <!-- Score bar -->
+    <div class="quiz-score-bar">
+      <span class="qsb-label" id="scoreLabel">Score</span>
+      <div class="qsb-track"><div class="qsb-fill" id="scoreFill" style="width:0%"></div></div>
+      <span class="qsb-score" id="scoreText">0 / 0</span>
+    </div>
+
+    <!-- Body -->
+    <div id="quizBody"></div>
+
+    <div class="quiz-controls" id="quizControls" style="display:none">
+      <button class="btn btn-primary"  onclick="showResults()">📊 See Results</button>
+      <button class="btn btn-ghost"    onclick="restartQuiz()">↺ Restart</button>
+      <button class="btn btn-ghost"    onclick="nextCourseQuiz()">Next course →</button>
+    </div>
+  </div>
+</main>
+
+<footer class="footer"><p>BCS Section A · 3rd Semester · COMSATS University Islamabad</p></footer>
+<div id="toast-container"></div>
+
+<script src="js/data.js"></script>
+<script>
+let activeCourseIdx = 0;
+let quizScores = {};
+let _activeFilter = 'all';
+let _activeTopic  = 'all';
+let _bookmarks    = JSON.parse(localStorage.getItem('quiz_bookmarks') || '{}');
+let _displayQuestions = [];
+
+function onDataLoaded() {
+  document.getElementById('quizCourseTabs').innerHTML = '';
+  quizScores = {};
+  initQuiz();
+}
+
+function initQuiz() {
+  APP_DATA.courses.forEach(c => { quizScores[c.id] = { correct:0, total:0 }; });
+  const tabs = document.getElementById('quizCourseTabs');
+  if (tabs.children.length > 0) return;
+  APP_DATA.courses.forEach((c, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'ctab' + (i===0?' active':'');
+    const qCount = (APP_DATA.quizzes[c.id]||[]).length;
+    btn.innerHTML = `${c.short} <span style="font-size:10px;opacity:.5">${qCount}q</span>`;
+    btn.onclick = () => {
+      document.querySelectorAll('.ctab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeCourseIdx = i;
+      quizScores[c.id] = { correct:0, total:0 };
+      (APP_DATA.quizzes[c.id]||[]).forEach(q => delete q._answered);
+      _activeFilter = 'all'; _activeTopic = 'all';
+      document.querySelectorAll('.filter-pill').forEach(p => p.classList.toggle('active', p.dataset.filter==='all'));
+      renderQuiz(c.id);
+    };
+    tabs.appendChild(btn);
+  });
+  renderQuiz(APP_DATA.courses[0].id);
+}
+
+function getFilteredQuestions(courseId) {
+  let qs = [...(APP_DATA.quizzes[courseId] || [])];
+  if (_activeFilter === 'bookmarked') qs = qs.filter((q,i) => _bookmarks[`${courseId}_${i}`]);
+  else if (_activeFilter !== 'all') qs = qs.filter(q => q.difficulty === _activeFilter);
+  if (_activeTopic !== 'all') qs = qs.filter(q => q.topic === _activeTopic);
+  return qs;
+}
+
+function renderQuiz(courseId) {
+  _displayQuestions = getFilteredQuestions(courseId);
+  const body     = document.getElementById('quizBody');
+  const controls = document.getElementById('quizControls');
+  body.innerHTML = '';
+  controls.style.display = 'none';
+  updateScore(courseId);
+  buildTopicFilter(courseId);
+
+  if (!_displayQuestions.length) {
+    const allQs = APP_DATA.quizzes[courseId] || [];
+    if (!allQs.length) {
+      body.innerHTML = `<div class="empty-state"><span class="big-icon">🎯</span><h3>No questions yet</h3><p>Questions are AI-generated from uploaded notes. Ask your admin to upload notes and generate questions.</p></div>`;
+    } else {
+      body.innerHTML = `<div class="empty-state"><span class="big-icon">🔍</span><h3>No questions match this filter</h3><p>Try changing the difficulty or topic filter.</p></div>`;
+    }
+    return;
+  }
+
+  _displayQuestions.forEach((q, qi) => {
+    const globalIdx = (APP_DATA.quizzes[courseId]||[]).indexOf(q);
+    const card = document.createElement('div');
+    card.className = 'q-card';
+    const answered = q._answered !== undefined;
+    const bookmarked = _bookmarks[`${courseId}_${globalIdx}`];
+
+    let optsHtml = '';
+    q.opts.forEach((opt, oi) => {
+      let cls = 'q-opt';
+      if (answered) {
+        if (oi === q.ans)            cls += ' correct';
+        else if (oi === q._answered) cls += ' wrong';
+        else                         cls += ' reveal';
+      }
+      optsHtml += `<button class="${cls}" onclick="answerQ('${courseId}',${globalIdx},${oi})" ${answered?'disabled':''}>${opt}</button>`;
+    });
+
+    const diffBadge = q.difficulty ? `<span class="q-difficulty ${q.difficulty}">${q.difficulty}</span>` : '';
+    const expHtml   = answered ? `<div class="q-explanation">${q._answered===q.ans?'<span style="color:var(--green)">✓ Correct.</span>':'<span style="color:var(--red)">✗ Incorrect.</span>'} ${q.exp||''}</div>` : '';
+
+    card.innerHTML = `
+      <div class="q-card-header">
+        <div class="q-num">Q${qi+1} of ${_displayQuestions.length}${q.topic?` · ${q.topic}`:''}${diffBadge}</div>
+        <button class="q-bookmark ${bookmarked?'active':''}" onclick="toggleBookmark('${courseId}',${globalIdx},this)" title="Bookmark">⭐</button>
+      </div>
+      <div class="q-text">${q.q}</div>
+      <div class="q-options">${optsHtml}</div>${expHtml}`;
+    body.appendChild(card);
+  });
+
+  if (_displayQuestions.every(q => q._answered !== undefined)) controls.style.display = 'flex';
+}
+
+function answerQ(courseId, globalIdx, oi) {
+  const questions = APP_DATA.quizzes[courseId];
+  if (!questions || questions[globalIdx]._answered !== undefined) return;
+  questions[globalIdx]._answered = oi;
+  if (oi === questions[globalIdx].ans) quizScores[courseId].correct++;
+  quizScores[courseId].total++;
+  renderQuiz(courseId);
+}
+
+function updateScore(courseId) {
+  const s   = quizScores[courseId] || { correct:0, total:0 };
+  const pct = s.total > 0 ? Math.round((s.correct/s.total)*100) : 0;
+  document.getElementById('scoreFill').style.width  = pct + '%';
+  document.getElementById('scoreText').textContent  = `${s.correct} / ${s.total}`;
+  document.getElementById('scoreLabel').textContent = s.total > 0 ? `${pct}%` : 'Score';
+}
+
+function setFilter(f, btn) {
+  _activeFilter = f;
+  document.querySelectorAll('.filter-pill').forEach(p => p.classList.toggle('active', p.dataset.filter===f));
+  renderQuiz(APP_DATA.courses[activeCourseIdx].id);
+}
+
+function buildTopicFilter(courseId) {
+  const qs     = APP_DATA.quizzes[courseId] || [];
+  const topics = [...new Set(qs.map(q => q.topic).filter(Boolean))];
+  const list   = document.getElementById('topicFilterList');
+  list.innerHTML = `<button class="filter-pill ${_activeTopic==='all'?'active':''}" onclick="setTopicFilter('all',this)">All Topics</button>` +
+    topics.map(t => `<button class="filter-pill ${_activeTopic===t?'active':''}" onclick="setTopicFilter('${t}',this)">${t}</button>`).join('');
+}
+
+function setTopicFilter(t, btn) {
+  _activeTopic = t;
+  document.getElementById('topicDropdown').style.display = 'none';
+  document.querySelectorAll('#topicFilterList .filter-pill').forEach(p => p.classList.toggle('active', p.textContent===t||(t==='all'&&p.textContent==='All Topics')));
+  renderQuiz(APP_DATA.courses[activeCourseIdx].id);
+}
+
+function toggleTopicDropdown() {
+  const d = document.getElementById('topicDropdown');
+  d.style.display = d.style.display === 'none' ? 'block' : 'none';
+}
+
+function shuffleQuestions() {
+  const courseId = APP_DATA.courses[activeCourseIdx].id;
+  const qs = APP_DATA.quizzes[courseId];
+  if (!qs) return;
+  for (let i=qs.length-1;i>0;i--) { const j=Math.floor(Math.random()*(i+1));[qs[i],qs[j]]=[qs[j],qs[i]]; }
+  renderQuiz(courseId);
+}
+
+function toggleBookmark(courseId, idx, btn) {
+  const key = `${courseId}_${idx}`;
+  _bookmarks[key] = !_bookmarks[key];
+  if (!_bookmarks[key]) delete _bookmarks[key];
+  localStorage.setItem('quiz_bookmarks', JSON.stringify(_bookmarks));
+  btn.classList.toggle('active', !!_bookmarks[key]);
+}
+
+function showResults() {
+  const courseId = APP_DATA.courses[activeCourseIdx].id;
+  const all      = APP_DATA.quizzes[courseId] || [];
+  const s        = quizScores[courseId];
+  const answered = all.filter(q => q._answered !== undefined);
+  const correct  = all.filter(q => q._answered === q.ans);
+  const total    = answered.length;
+  const pct      = total > 0 ? Math.round((correct.length/total)*100) : 0;
+  const grade    = pct>=90?'🏆 Outstanding!':pct>=75?'🌟 Excellent!':pct>=60?'👍 Good job!':pct>=40?'📚 Keep studying':'⚠️ Needs more practice';
+  const color    = pct>=75?'var(--green)':pct>=50?'var(--accent2)':pct>=30?'var(--amber)':'var(--red)';
+
+  // Topic breakdown
+  const topicMap = {};
+  all.forEach(q => {
+    if (q._answered === undefined) return;
+    const t = q.topic || 'General';
+    if (!topicMap[t]) topicMap[t] = { correct:0, total:0 };
+    topicMap[t].total++;
+    if (q._answered === q.ans) topicMap[t].correct++;
+  });
+
+  // Difficulty breakdown
+  const diffMap = {};
+  all.forEach(q => {
+    if (q._answered === undefined) return;
+    const d = q.difficulty || 'unknown';
+    if (!diffMap[d]) diffMap[d] = { correct:0, total:0 };
+    diffMap[d].total++;
+    if (q._answered === q.ans) diffMap[d].correct++;
+  });
+
+  document.getElementById('quizBody').innerHTML = `
+    <div class="quiz-result">
+      <div class="result-score" style="color:${color}">${pct}%</div>
+      <div class="result-label">${grade}</div>
+      <div class="result-breakdown">
+        <div class="rb-item"><div class="rb-num" style="color:var(--green)">${correct.length}</div><div class="rb-lbl">Correct</div></div>
+        <div class="rb-item"><div class="rb-num" style="color:var(--red)">${total-correct.length}</div><div class="rb-lbl">Wrong</div></div>
+        <div class="rb-item"><div class="rb-num">${total}</div><div class="rb-lbl">Answered</div></div>
+      </div>
+
+      ${Object.keys(topicMap).length ? `
+      <div style="margin-top:1.5rem;text-align:left;max-width:500px;margin-left:auto;margin-right:auto">
+        <p style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Topic Breakdown</p>
+        <table class="results-topic-table">
+          <thead><tr><th>Topic</th><th>Score</th><th>Result</th></tr></thead>
+          <tbody>${Object.entries(topicMap).map(([t,st])=>{
+            const tp=Math.round((st.correct/st.total)*100);
+            return `<tr>
+              <td>${t}</td>
+              <td style="font-family:var(--font-mono)">${st.correct}/${st.total}</td>
+              <td><span style="color:${tp>=60?'#22c55e':'#ef4444'}">${tp}% ${tp>=60?'✓':'✗'}</span></td>
+            </tr>`;
+          }).join('')}</tbody>
+        </table>
+      </div>` : ''}
+
+      ${Object.keys(diffMap).length > 1 ? `
+      <div style="margin-top:1rem;text-align:left;max-width:500px;margin-left:auto;margin-right:auto">
+        <p style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">By Difficulty</p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          ${Object.entries(diffMap).map(([d,st])=>{
+            const dp=Math.round((st.correct/st.total)*100);
+            const cl = d==='easy'?'var(--green)':d==='hard'?'var(--red)':'var(--amber)';
+            return `<div style="flex:1;min-width:100px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center">
+              <div style="font-size:10px;text-transform:uppercase;color:${cl};letter-spacing:.06em;margin-bottom:4px">${d}</div>
+              <div style="font-family:var(--font-mono);font-size:18px;font-weight:700;color:${cl}">${dp}%</div>
+              <div style="font-size:11px;color:var(--text3)">${st.correct}/${st.total}</div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>` : ''}
+    </div>`;
+  document.getElementById('quizControls').style.display = 'flex';
+}
+
+function restartQuiz() {
+  const courseId = APP_DATA.courses[activeCourseIdx].id;
+  (APP_DATA.quizzes[courseId]||[]).forEach(q => delete q._answered);
+  quizScores[courseId] = { correct:0, total:0 };
+  renderQuiz(courseId);
+}
+
+function nextCourseQuiz() {
+  activeCourseIdx = (activeCourseIdx+1) % APP_DATA.courses.length;
+  document.querySelectorAll('.ctab').forEach((b,i) => b.classList.toggle('active', i===activeCourseIdx));
+  const cId = APP_DATA.courses[activeCourseIdx].id;
+  (APP_DATA.quizzes[cId]||[]).forEach(q => delete q._answered);
+  quizScores[cId] = { correct:0, total:0 };
+  renderQuiz(cId);
+}
+
+initQuiz();
+</script>
+</body>
+</html>
