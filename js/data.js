@@ -32,7 +32,7 @@ const MASTER_KEY  = '$2a$10$71mUhVOOXOpiRPD96MDIDenFdtAoL9GG5B7Z8yqijyH.Fx6xCQWJ
 function getGeminiKey() {
   return localStorage.getItem('gemini_api_key') || 'AIzaSyCr9Zc-uS2D4wCICU6qWmBk0_wvezA7RAk';
 }
-const GEMINI_MODEL = 'gemini-1.5-flash';
+const GEMINI_MODEL = 'gemini-3.1-flash';
 
 // ─── Session identity (for presence) ─────────────────────────────────────────
 const SESSION_ID = (() => {
@@ -164,7 +164,8 @@ async function geminiGenerate(prompt, statusEl) {
 
   // Strategy 1: Try our Netlify edge function proxy (bypasses AI Gateway)
   // Strategy 2: Fall back to direct Gemini call (works on GitHub Pages / other hosts)
-  const MODELS = ['gemini-1.5-flash', 'gemini-2.0-flash-lite', 'gemini-1.0-pro'];
+  // Replace the old list with this current 2026 version
+  const MODELS = ['gemini-3.1-flash', 'gemini-3-flash', 'gemini-2.5-flash'];
   const DIRECT_KEY = getGeminiKey();
 
   // Try proxy first (only works on Netlify with edge functions)
