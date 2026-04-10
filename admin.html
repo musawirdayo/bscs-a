@@ -698,7 +698,7 @@ async function saveSched() {
 // ── Live Students ─────────────────────────────────────────────────────────────
 async function refreshPresence() {
   try {
-    const res=await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`,{headers:{'X-Master-Key':MASTER_KEY}});
+    const res=await fetch(`https://api.jsonbin.io/v3/b/69d90713aaba882197e49e22/latest`,{headers:{'X-Master-Key':MASTER_KEY}});
     if(res.ok){const{record}=await res.json();if(record.presence)APP_DATA.presence=record.presence;}
   }catch(e){}
   const now=Date.now();
