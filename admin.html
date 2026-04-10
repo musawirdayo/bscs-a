@@ -699,10 +699,15 @@ async function saveSched() {
 async function refreshPresence() {
   try {
     const res=await fetch(`https://api.jsonbin.io/v3/b/69d90713aaba882197e49e22/latest`,{headers:{'X-Master-Key':MASTER_KEY}});
-    if(res.ok){const{record}=await res.json();if(record.presence)APP_DATA.presence=record.presence;}
+    if(res.ok){
+      const json = await res.json();
+      if(json.record && json.record.presence) APP_DATA.presence = json.record.presence;
+    }
   }catch(e){}
+  
   const now=Date.now();
   const active=Object.entries(APP_DATA.presence||{}).filter(([,p])=>now-p.ts<180000);
+  
   document.getElementById('onlineBig').textContent=active.length;
   document.getElementById('onlineN').textContent=active.length;
   document.getElementById('st-o').textContent=active.length;
@@ -723,7 +728,7 @@ async function refreshPresence() {
     <span style="color:var(--text3);font-family:var(--mono)">${n}</span>
   </div>`).join('')||'<p style="color:var(--text3);font-size:12px">No data.</p>';
 }
-
+  
 // ── Settings ──────────────────────────────────────────────────────────────────
 function saveGeminiKey() {
   const k=document.getElementById('geminiKey').value.trim();
