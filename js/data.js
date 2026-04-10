@@ -21,6 +21,7 @@ const APP_DATA = {
 };
 
 // ─── Cloud (JSONBin) ──────────────────────────────────────────────────────────
+const PRESENCE_BIN_ID = '69d90713aaba882197e49e22';
 const BIN_ID     = '69d6d7a9aaba882197da5ce4';
 const MASTER_KEY = '$2a$10$71mUhVOOXOpiRPD96MDIDenFdtAoL9GG5B7Z8yqijyH.Fx6xCQWJ6';
 
@@ -68,14 +69,39 @@ async function loadData() {
 }
 
 // ─── Presence ────────────────────────────────────────────────────────────────
+// ─── Presence ────────────────────────────────────────────────────────────────
 const _SID  = (() => { let i=sessionStorage.getItem('bcs_sid'); if(!i){i='u'+Math.random().toString(36).slice(2,8);sessionStorage.setItem('bcs_sid',i);} return i; })();
 
-function _pingPresence() {
+async function _pingPresence() {
   const now = Date.now();
-  if (!APP_DATA.presence) APP_DATA.presence = {};
-  Object.keys(APP_DATA.presence).forEach(k => { if (now - APP_DATA.presence[k].ts > 180000) delete APP_DATA.presence[k]; });
-  APP_DATA.presence[_SID] = { name: localStorage.getItem('bcs_name')||'Student', page: document.title.split('—')[0].trim(), ts: now };
-  fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`,{method:'PUT',headers:{'Content-Type':'application/json','X-Master-Key':MASTER_KEY},body:JSON.stringify(APP_DATA)}).catch(()=>{});
+  try {
+    // 1. Fetch ONLY the presence data from your NEW bin
+    const res = await fetch(`https://api.jsonbin.io/v3/b/${PRESENCE_BIN_ID}/latest`, { headers: {'X-Master-Key': MASTER_KEY} });
+    let liveData = { presence: {} };
+    if (res.ok) {
+       const json = await res.json();
+       liveData = json.record || { presence: {} };
+    }
+
+    // 2. Clean up old inactive users
+    Object.keys(liveData.presence).forEach(k => { if (now - liveData.presence[k].ts > 180000) delete liveData.presence[k]; });
+
+    // 3. Add current user
+    liveData.presence[_SID] = { 
+       name: localStorage.getItem('bcs_name') || 'Student', 
+       page: document.title.split('—')[0].trim(), 
+       ts: now 
+    };
+
+    // 4. Save ONLY back to the NEW presence bin
+    await fetch(`https://api.jsonbin.io/v3/b/${PRESENCE_BIN_ID}`, {
+       method: 'PUT',
+       headers: { 'Content-Type': 'application/json', 'X-Master-Key': MASTER_KEY },
+       body: JSON.stringify(liveData)
+    });
+
+    APP_DATA.presence = liveData.presence;
+  } catch(e) {}
 }
 setInterval(_pingPresence, 90000);
 function getOnlineCount() { const n=Date.now(); return Object.values(APP_DATA.presence||{}).filter(p=>n-p.ts<180000).length; }
