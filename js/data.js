@@ -64,13 +64,8 @@ async function loadData() {
     } else { _syncStatus = 'offline'; }
   } catch(e) { _syncStatus = 'offline'; }
   _notifySyncStatus();
-  _pingPresence();
   if (typeof onDataLoaded === 'function') onDataLoaded();
 }
-
-// ─── Presence ────────────────────────────────────────────────────────────────
-// ─── Presence ────────────────────────────────────────────────────────────────
-const _SID  = (() => { let i=sessionStorage.getItem('bcs_sid'); if(!i){i='u'+Math.random().toString(36).slice(2,8);sessionStorage.setItem('bcs_sid',i);} return i; })();
 
 // ─── Presence ────────────────────────────────────────────────────────────────
 const _SID  = (() => { let i=sessionStorage.getItem('bcs_sid'); if(!i){i='u'+Math.random().toString(36).slice(2,8);sessionStorage.setItem('bcs_sid',i);} return i; })();
@@ -115,9 +110,6 @@ async function _pingPresence() {
 setInterval(_pingPresence, 90000);
 function getOnlineCount() { const n=Date.now(); return Object.values(APP_DATA.presence||{}).filter(p=>n-p.ts<180000).length; }
 
-// Boot
-loadData();
-_pingPresence(); // <-- This forces it to check who is online the second you open the page!
 // ─── Sync status pill ─────────────────────────────────────────────────────────
 function _notifySyncStatus() {
   const MAP = { idle:['',''], loading:['⟳ Syncing…','#a1a1aa'], saving:['⟳ Saving…','#a1a1aa'], saved:['✓ Synced','#22c55e'], loaded:['✓ Live','#22c55e'], offline:['⚠ Offline','#f59e0b'], error:['✕ Error','#ef4444'] };
@@ -326,5 +318,6 @@ function showToast(msg,type='success') {
 function _toast(m,t){showToast(m,t);}
 function toggleMobileNav(){document.getElementById('mobileNav')?.classList.toggle('open');}
 
-// Boot
+// ─── Boot ────────────────────────────────────────────────────────────────────
 loadData();
+_pingPresence(); // <-- This forces it to check who is online the second you open the page!
