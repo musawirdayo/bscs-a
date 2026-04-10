@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Admin — BCS 3A</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#000;--bg2:#080808;--bg3:#101010;--bg4:#181818;--border:#222;--border2:#333;--border3:#444;--text:#ededed;--text2:#a1a1aa;--text3:#52525b;--accent:#5e6ad2;--accent2:#6f7bf7;--ag:rgba(94,106,210,.2);--danger:#ef4444;--success:#22c55e;--amber:#f59e0b;--r:8px;--r2:12px;--font:'Inter',sans-serif;--mono:'JetBrains Mono',monospace}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--font);line-height:1.5;-webkit-font-smoothing:antialiased}
+h2{font-size:18px;font-weight:600;letter-spacing:-.02em}
+h3{font-size:14px;font-weight:600;margin-bottom:14px;border-bottom:1px solid var(--border);padding-bottom:10px}
+p{color:var(--text2);font-size:13px;margin-bottom:12px}
+a{color:var(--accent2)}
+.topnav{display:flex;justify-content:space-between;align-items:center;padding:14px 28px;border-bottom:1px solid var(--border);background:rgba(0,0,0,.9);backdrop-filter:blur(10px);position:sticky;top:0;z-index:100}
+.nav-brand{font-weight:700;font-size:14px;display:flex;align-items:center;gap:8px}
+.brand-dot{width:8px;height:8px;background:var(--accent);border-radius:50%;box-shadow:0 0 10px var(--accent);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.sync-badge{font-size:11px;font-family:var(--mono);padding:3px 10px;border-radius:20px;background:var(--bg3);border:1px solid var(--border)}
+.wrap{max-width:1200px;margin:0 auto;padding:32px 24px}
+.admin-grid{display:grid;grid-template-columns:220px 1fr;gap:24px;align-items:start}
+.sidebar{position:sticky;top:72px;display:flex;flex-direction:column;gap:3px}
+.snav-sec{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);padding:10px 10px 4px;font-weight:700}
+.snav-btn{background:none;color:var(--text2);border:none;text-align:left;padding:8px 12px;border-radius:6px;font-family:var(--font);font-size:12px;cursor:pointer;transition:all .15s;width:100%;display:flex;align-items:center;gap:8px}
+.snav-btn:hover{background:var(--bg3);color:var(--text)}
+.snav-btn.active{background:var(--bg4);color:var(--text);font-weight:500;border:1px solid var(--border2)}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:22px}
+.sec{display:none;animation:fi .2s ease}.sec.active{display:block}
+@keyframes fi{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+.fg{margin-bottom:16px}
+.fl{display:block;font-size:11px;font-weight:600;margin-bottom:6px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em}
+.fi,.ft,.fs{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);color:var(--text);padding:9px 11px;font-family:var(--font);font-size:13px;transition:border-color .15s;outline:none}
+.ft{font-family:var(--mono);font-size:12px;resize:vertical}
+.fi:focus,.ft:focus,.fs:focus{border-color:var(--accent);box-shadow:0 0 0 2px var(--ag)}
+.fs option{background:var(--bg3)}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:var(--r);font-family:var(--font);font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;border:1px solid transparent}
+.btn-p{background:var(--accent);color:#fff;border-color:var(--accent)}.btn-p:hover{background:var(--accent2);box-shadow:0 4px 12px var(--ag)}
+.btn-s{background:var(--bg3);color:var(--text);border-color:var(--border2)}.btn-s:hover{background:var(--bg4);border-color:var(--border3)}
+.btn-d{background:none;color:var(--danger);border-color:rgba(239,68,68,.3)}.btn-d:hover{background:rgba(239,68,68,.08);border-color:var(--danger)}
+.btn-ok{background:rgba(34,197,94,.1);color:var(--success);border-color:rgba(34,197,94,.3)}
+.btn-sm{padding:5px 10px;font-size:11px}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+.stat-row{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:22px}
+.stat-box{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:12px;text-align:center}
+.stat-num{font-family:var(--mono);font-size:22px;font-weight:600;color:var(--accent2)}
+.stat-lbl{font-size:10px;color:var(--text3);margin-top:2px;text-transform:uppercase;letter-spacing:.05em}
+.stat-box.hl{border-color:rgba(94,106,210,.3);background:rgba(94,106,210,.06)}
+.list{display:flex;flex-direction:column;gap:6px;max-height:440px;overflow-y:auto;margin-top:12px}
+.list::-webkit-scrollbar{width:4px}.list::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+.li{display:flex;justify-content:space-between;align-items:flex-start;padding:12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);gap:10px;transition:border-color .15s}
+.li:hover{border-color:var(--border2)}
+.li-m{flex:1;min-width:0}
+.li-t{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.li-s{font-size:11px;color:var(--text3);margin-top:2px}
+.li-a{display:flex;gap:5px;flex-shrink:0}
+.badge{padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase}
+.b-ai{background:rgba(94,106,210,.15);color:var(--accent2);border:1px solid rgba(94,106,210,.3)}
+.b-ok{background:rgba(34,197,94,.1);color:var(--success);border:1px solid rgba(34,197,94,.3)}
+.b-warn{background:rgba(245,158,11,.1);color:var(--amber);border:1px solid rgba(245,158,11,.3)}
+.b-danger{background:rgba(239,68,68,.1);color:var(--danger);border:1px solid rgba(239,68,68,.3)}
+.info-box{background:var(--bg3);border:1px solid rgba(94,106,210,.25);border-radius:var(--r);padding:14px;margin-bottom:16px;font-size:12px;color:var(--text2);line-height:1.7}
+.info-box code{background:var(--bg4);padding:2px 6px;border-radius:4px;font-family:var(--mono);font-size:11px;color:var(--accent2)}
+.status-text{font-family:var(--mono);font-size:11px;min-height:18px;margin-top:8px}
+.status-text.ok{color:var(--success)}.status-text.err{color:var(--danger)}
+.spinner{display:inline-block;width:13px;height:13px;border:2px solid rgba(94,106,210,.3);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:5px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.presence-item{display:flex;align-items:center;justify-content:space-between;font-size:12px;padding:5px 0;border-bottom:1px solid var(--border);color:var(--text2)}
+.presence-item:last-child{border-bottom:none}
+.prog-row{display:flex;align-items:center;gap:10px;margin-bottom:6px;font-size:12px}
+.prog-bar{flex:1;height:4px;background:var(--bg4);border-radius:2px;overflow:hidden}
+.prog-fill{height:100%;background:var(--accent);border-radius:2px}
+.res-type-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.rtype{padding:5px 12px;background:var(--bg4);border:1px solid var(--border2);border-radius:6px;color:var(--text2);font-size:12px;cursor:pointer;font-family:var(--font);transition:all .15s}
+.rtype.active,.rtype:hover{border-color:var(--accent);color:var(--accent2);background:var(--bg3)}
+.dt{width:100%;border-collapse:collapse;font-size:12px}
+.dt th{color:var(--text3);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--border);text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em}
+.dt td{padding:8px 10px;border-bottom:1px solid var(--border);color:var(--text2)}
+.dt tr:last-child td{border-bottom:none}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.8);backdrop-filter:blur(4px);display:none;justify-content:center;align-items:center;z-index:1000}
+.modal-bg.open{display:flex}
+.modal{background:var(--bg2);width:600px;max-width:94vw;border-radius:var(--r2);border:1px solid var(--border2);padding:24px;max-height:88vh;overflow-y:auto}
+.modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+.modal-x{background:none;border:none;color:var(--text2);cursor:pointer;font-size:20px;line-height:1;padding:0}
+#toast-c{position:fixed;bottom:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px}
+@media(max-width:768px){.admin-grid{grid-template-columns:1fr}.sidebar{position:static;flex-direction:row;flex-wrap:wrap;gap:4px}.snav-btn{width:auto}.stat-row{grid-template-columns:repeat(3,1fr)}.g2,.g3{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<nav class="topnav">
+  <div class="nav-brand"><span class="brand-dot"></span>BCS 3A · Admin</div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <span id="onlinePill" style="font-size:11px;color:var(--success);display:none">●&nbsp;<span id="onlineN">0</span> online</span>
+    <span class="sync-badge" id="syncStatus">⟳ Loading</span>
+    <a href="index.html" class="btn btn-s btn-sm">← Site</a>
+    <button class="btn btn-s btn-sm" onclick="adminLogout()">🔒 Lock</button>
+  </div>
+</nav>
+
+<!-- LOGIN -->
+<div class="wrap" id="loginArea">
+  <div class="card" style="max-width:360px;margin:60px auto;text-align:center">
+    <div style="font-size:40px;margin-bottom:14px">🔐</div>
+    <h2 style="margin-bottom:6px">Admin Login</h2>
+    <p>BCS Section A · Command Center</p>
+    <div class="fg" style="text-align:left;margin-top:18px">
+      <label class="fl">Password</label>
+      <input type="password" class="fi" id="loginInput" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="btn btn-p" style="width:100%;padding:10px;margin-top:4px" onclick="doLogin()">Login</button>
+    <p id="loginErr" style="color:var(--danger);font-size:12px;margin-top:10px;display:none">Wrong password.</p>
+  </div>
+</div>
+
+<!-- ADMIN PANEL -->
+<div class="wrap" id="adminPanel" style="display:none">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:22px;flex-wrap:wrap;gap:14px">
+    <div><h2>Command Center</h2><p style="margin:0">Every save auto-deploys to all students.</p></div>
+  </div>
+  <div class="stat-row">
+    <div class="stat-box"><div class="stat-num" id="st-t">0</div><div class="stat-lbl">Topics</div></div>
+    <div class="stat-box"><div class="stat-num" id="st-q">0</div><div class="stat-lbl">MCQs</div></div>
+    <div class="stat-box"><div class="stat-num" id="st-f">0</div><div class="stat-lbl">Flashcards</div></div>
+    <div class="stat-box"><div class="stat-num" id="st-r">0</div><div class="stat-lbl">Resources</div></div>
+    <div class="stat-box hl"><div class="stat-num" id="st-o">0</div><div class="stat-lbl">Online Now</div></div>
+  </div>
+
+  <div class="admin-grid">
+    <div class="sidebar">
+      <div class="snav-sec">Content</div>
+      <button class="snav-btn active" onclick="showSec('notes')">📝 Notes Upload</button>
+      <button class="snav-btn" onclick="showSec('topics')">📂 Manage Topics</button>
+      <button class="snav-btn" onclick="showSec('mcqs')">🎯 MCQ Upload (JSON)</button>
+      <button class="snav-btn" onclick="showSec('cards')">⚡ Flashcard Upload (JSON)</button>
+      <button class="snav-btn" onclick="showSec('resources')">🔗 Resources & Links</button>
+      <div class="snav-sec">Platform</div>
+      <button class="snav-btn" onclick="showSec('announce')">📢 Announcements</button>
+      <button class="snav-btn" onclick="showSec('sched')">📅 Exam Schedule</button>
+      <button class="snav-btn" onclick="showSec('students')">👥 Live Students</button>
+      <button class="snav-btn" onclick="showSec('settings')">⚙️ Settings</button>
+      <button class="snav-btn" onclick="showSec('db')">🗄 Database</button>
+    </div>
+
+    <div class="card">
+
+      <!-- ── NOTES ── -->
+      <div class="sec active" id="admin-notes">
+        <h3>📝 Notes Upload</h3>
+        <div class="info-box">
+          <strong style="color:var(--text)">How to upload notes:</strong><br>
+          1. Generate your notes in ChatGPT (ask for markdown format)<br>
+          2. Copy the response<br>
+          3. Paste directly into the box below — headings, bold, bullets, tables are all preserved<br>
+          4. Click <strong>Save & Deploy</strong><br><br>
+          Supports: <code># Heading</code> <code>## Subheading</code> <code>**bold**</code> <code>*italic*</code> <code>`code`</code> <code>- bullets</code> <code>| tables |</code> <code>&gt; quotes</code> <code>```code blocks```</code>
+        </div>
+        <div class="g2">
+          <div class="fg"><label class="fl">Course</label><select class="fs" id="noteCourse"></select></div>
+          <div class="fg"><label class="fl">Topic Name</label><input type="text" class="fi" id="noteTopic" placeholder="e.g. Binary Search Trees"></div>
+        </div>
+        <div class="fg">
+          <label class="fl">Optional Summary (shown as intro)</label>
+          <input type="text" class="fi" id="noteSummary" placeholder="Brief 1-2 sentence overview of this topic">
+        </div>
+        <div class="fg">
+          <label class="fl">Paste Notes (Markdown / ChatGPT output)</label>
+          <textarea class="ft" id="noteContent" rows="14" placeholder="# Introduction to Binary Search Trees&#10;&#10;A **Binary Search Tree (BST)** is a node-based binary tree data structure.&#10;&#10;## Properties&#10;- Every node has at most two children&#10;- Left child is smaller than parent&#10;- Right child is greater than parent&#10;&#10;**Note:** BSTs enable O(log n) average search time."></textarea>
+        </div>
+        <div id="notePreviewBox" style="display:none;margin-bottom:14px">
+          <div style="font-size:11px;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em">Preview</div>
+          <div id="notePreview" style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:14px;max-height:200px;overflow-y:auto;font-size:12px;line-height:1.7;color:var(--text2)"></div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-p" onclick="saveNotes()">💾 Save & Deploy</button>
+          <button class="btn btn-s" onclick="previewNotes()">👁 Preview</button>
+          <button class="btn btn-s" onclick="clearNoteForm()">Clear</button>
+        </div>
+        <div class="status-text" id="noteStatus"></div>
+      </div>
+
+      <!-- ── MANAGE TOPICS ── -->
+      <div class="sec" id="admin-topics">
+        <h3>📂 Manage Topics</h3>
+        <div class="fg"><label class="fl">Course</label><select class="fs" id="topicsCourse" onchange="renderTopics()"></select></div>
+        <div id="topicsList"></div>
+      </div>
+
+      <!-- ── MCQ UPLOAD ── -->
+      <div class="sec" id="admin-mcqs">
+        <h3>🎯 MCQ Upload (JSON)</h3>
+        <div class="info-box">
+          <strong style="color:var(--text)">How to upload MCQs:</strong><br>
+          1. Ask ChatGPT: <em>"Generate 15 MCQs for [topic] in this JSON format"</em><br>
+          2. Copy the JSON<br>
+          3. Paste below and click Upload<br><br>
+          <strong style="color:var(--text)">Required JSON format:</strong><br>
+          <code>[{"q":"Question?","opts":["A. option","B. option","C. option","D. option"],"ans":0,"exp":"Why A is correct","topic":"Topic Name","difficulty":"easy"}]</code><br><br>
+          <code>ans</code> = index of correct option (0=A, 1=B, 2=C, 3=D) · <code>difficulty</code> = easy/medium/hard
+        </div>
+        <div class="g2">
+          <div class="fg"><label class="fl">Course</label><select class="fs" id="mcqCourse"></select></div>
+          <div class="fg"><label class="fl">Topic (overwrites existing for this topic)</label><input type="text" class="fi" id="mcqTopic" placeholder="e.g. Binary Search Trees"></div>
+        </div>
+        <div class="fg">
+          <label class="fl">Upload JSON File</label>
+          <input type="file" class="fi" id="mcqFile" accept=".json" onchange="previewMCQFile(event)" style="padding:7px">
+        </div>
+        <div class="fg">
+          <label class="fl">Or Paste JSON directly</label>
+          <textarea class="ft" id="mcqJson" rows="8" placeholder='[{"q":"What is a BST?","opts":["A. Binary Sequential Tree","B. Binary Search Tree","C. Basic Storage Type","D. Boolean Syntax Tree"],"ans":1,"exp":"BST stands for Binary Search Tree","topic":"BST","difficulty":"easy"}]'></textarea>
+        </div>
+        <div id="mcqPreview" style="font-size:12px;color:var(--text2);margin-bottom:12px"></div>
+        <div class="btn-row">
+          <button class="btn btn-p" onclick="uploadMCQs()">⬆ Upload MCQs</button>
+          <button class="btn btn-s" onclick="validateMCQ()">✓ Validate JSON</button>
+        </div>
+        <div class="status-text" id="mcqStatus"></div>
+      </div>
+
+      <!-- ── FLASHCARD UPLOAD ── -->
+      <div class="sec" id="admin-cards">
+        <h3>⚡ Flashcard Upload (JSON)</h3>
+        <div class="info-box">
+          <strong style="color:var(--text)">How to upload flashcards:</strong><br>
+          1. Ask ChatGPT: <em>"Generate 20 flashcards for [topic] in this JSON format"</em><br>
+          2. Copy the JSON<br>
+          3. Paste below and click Upload<br><br>
+          <strong style="color:var(--text)">Required JSON format:</strong><br>
+          <code>[{"q":"What is X?","a":"X is a data structure that...","topic":"Topic Name"}]</code>
+        </div>
+        <div class="g2">
+          <div class="fg"><label class="fl">Course</label><select class="fs" id="cardCourse"></select></div>
+          <div class="fg"><label class="fl">Topic</label><input type="text" class="fi" id="cardTopic" placeholder="e.g. Binary Search Trees"></div>
+        </div>
+        <div class="fg">
+          <label class="fl">Upload JSON File</label>
+          <input type="file" class="fi" id="cardFile" accept=".json" onchange="previewCardFile(event)" style="padding:7px">
+        </div>
+        <div class="fg">
+          <label class="fl">Or Paste JSON directly</label>
+          <textarea class="ft" id="cardJson" rows="8" placeholder='[{"q":"What is a BST?","a":"A Binary Search Tree is a tree where left child < parent < right child, enabling O(log n) search.","topic":"BST"}]'></textarea>
+        </div>
+        <div id="cardPreview" style="font-size:12px;color:var(--text2);margin-bottom:12px"></div>
+        <div class="btn-row">
+          <button class="btn btn-p" onclick="uploadCards()">⬆ Upload Flashcards</button>
+          <button class="btn btn-s" onclick="validateCard()">✓ Validate JSON</button>
+        </div>
+        <div class="status-text" id="cardStatus"></div>
+      </div>
+
+      <!-- ── RESOURCES ── -->
+      <div class="sec" id="admin-resources">
+        <h3>🔗 Resources & Links</h3>
+        <p>Add past papers, YouTube videos, drive links, or any study resources. They appear in the notes reading view.</p>
+        <div class="g2">
+          <div class="fg"><label class="fl">Course</label><select class="fs" id="resCourse"></select></div>
+          <div class="fg"><label class="fl">Topic (optional)</label><input type="text" class="fi" id="resTopic" placeholder="leave blank for course-wide"></div>
+        </div>
+        <div class="fg"><label class="fl">Title</label><input type="text" class="fi" id="resTitle" placeholder="e.g. DLD Past Paper 2024, MIT Lecture on Trees…"></div>
+        <div class="fg"><label class="fl">URL</label><input type="url" class="fi" id="resUrl" placeholder="https://…"></div>
+        <div class="fg">
+          <label class="fl">Type</label>
+          <div class="res-type-row">
+            <button class="rtype active" data-t="link" onclick="selResType(this)">🔗 Link</button>
+            <button class="rtype" data-t="pdf" onclick="selResType(this)">📄 PDF</button>
+            <button class="rtype" data-t="video" onclick="selResType(this)">🎥 Video</button>
+            <button class="rtype" data-t="pastpaper" onclick="selResType(this)">📋 Past Paper</button>
+            <button class="rtype" data-t="slides" onclick="selResType(this)">📊 Slides</button>
+          </div>
+        </div>
+        <div class="btn-row"><button class="btn btn-p" onclick="addResource()">+ Add Resource</button></div>
+        <div style="margin-top:18px">
+          <div class="fg"><label class="fl">View for Course</label><select class="fs" id="resViewCourse" onchange="renderResources()"></select></div>
+          <div id="resList" class="list"></div>
+        </div>
+      </div>
+
+      <!-- ── ANNOUNCEMENTS ── -->
+      <div class="sec" id="admin-announce">
+        <h3>📢 Announcements</h3>
+        <p>Shown on student dashboard. Students can dismiss them. You can delete them here.</p>
+        <div class="fg"><label class="fl">Message</label><textarea class="ft" id="annMsg" rows="3" placeholder="Type announcement…"></textarea></div>
+        <div class="g2">
+          <div class="fg">
+            <label class="fl">Type</label>
+            <select class="fs" id="annType">
+              <option value="info">📢 Info</option>
+              <option value="warning">⚠️ Warning</option>
+              <option value="success">✅ Good news</option>
+              <option value="danger">🔴 Urgent</option>
+            </select>
+          </div>
+          <div class="fg" style="display:flex;align-items:flex-end">
+            <button class="btn btn-p" style="width:100%" onclick="postAnn()">Post</button>
+          </div>
+        </div>
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:8px;font-weight:700;margin-top:8px">Active</div>
+        <div id="annList" class="list"></div>
+      </div>
+
+      <!-- ── SCHEDULE ── -->
+      <div class="sec" id="admin-sched">
+        <h3>📅 Exam Schedule</h3>
+        <p>Update dates, times, and rooms. Deploys instantly to all students.</p>
+        <div id="schedList"></div>
+        <div class="btn-row"><button class="btn btn-p" onclick="saveSched()">💾 Save Schedule</button></div>
+      </div>
+
+      <!-- ── STUDENTS ── -->
+      <div class="sec" id="admin-students">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <h3 style="margin:0;border:none;padding:0">👥 Live Students</h3>
+          <button class="btn btn-s btn-sm" onclick="refreshPresence()">⟳ Refresh</button>
+        </div>
+        <div style="background:linear-gradient(135deg,rgba(34,197,94,.05),rgba(6,182,212,.05));border:1px solid rgba(34,197,94,.2);border-radius:var(--r2);padding:16px;margin-bottom:16px">
+          <div style="font-family:var(--mono);font-size:36px;font-weight:700;color:var(--success)" id="onlineBig">0</div>
+          <div style="font-size:12px;color:var(--text3)">students online (last 3 minutes)</div>
+          <div id="presenceList" style="margin-top:10px;display:flex;flex-direction:column;gap:0;max-height:180px;overflow-y:auto"></div>
+        </div>
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:8px;font-weight:700">Page Distribution</div>
+        <div id="pageDist"></div>
+      </div>
+
+      <!-- ── SETTINGS ── -->
+      <div class="sec" id="admin-settings">
+        <h3>⚙️ Settings</h3>
+        <div class="info-box">
+          <strong style="color:var(--text)">Gemini API Key</strong> (optional — only needed for student "Ask AI" feature)<br>
+          Get a free key at <a href="https://aistudio.google.com/app/apikey" target="_blank">aistudio.google.com</a>.<br>
+          Notes, MCQs, and flashcards are uploaded manually — no API key needed for those.
+        </div>
+        <div class="fg">
+          <label class="fl">Gemini API Key</label>
+          <input type="password" class="fi" id="geminiKey" placeholder="AIzaSy… (optional)">
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-p" onclick="saveGeminiKey()">Save Key</button>
+          <button class="btn btn-s" onclick="testGeminiKey()">Test Key</button>
+          <button class="btn btn-d btn-sm" onclick="clearGeminiKey()">Clear</button>
+        </div>
+        <div class="status-text" id="keyStatus"></div>
+        <div style="margin-top:24px;border-top:1px solid var(--border);padding-top:18px">
+          <div class="fg"><label class="fl">Admin Password (to change, edit admin.html)</label><input type="text" class="fi" value="bcs3a2026" readonly style="opacity:.5"></div>
+        </div>
+      </div>
+
+      <!-- ── DATABASE ── -->
+      <div class="sec" id="admin-db">
+        <h3>🗄 Database</h3>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px">
+          <button class="btn btn-s" onclick="exportData()">⬇ Export JSON</button>
+          <button class="btn btn-s" onclick="document.getElementById('importFile').click()">⬆ Import JSON</button>
+          <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
+          <button class="btn btn-d" onclick="confirmReset()">🗑 Reset All</button>
+        </div>
+        <table class="dt">
+          <thead><tr><th>Course</th><th>Topics</th><th>MCQs</th><th>Flashcards</th><th>Resources</th></tr></thead>
+          <tbody id="dbBody"></tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal-bg" id="modal"><div class="modal">
+  <div class="modal-head"><h3 id="modalTitle" style="border:none;padding:0;margin:0"></h3><button class="modal-x" onclick="closeModal()">✕</button></div>
+  <div id="modalBody"></div>
+</div></div>
+
+<div id="toast-c"></div>
+
+<script src="js/data.js"></script>
+<script>
+const PASS = 'bcs3a2026';
+let _authed = false;
+let _resType = 'link';
+
+// ── Auth ──────────────────────────────────────────────────────────────────────
+function checkAuth() {
+  _authed = sessionStorage.getItem('admin_ok')==='1';
+  if (_authed) { show('loginArea','none'); show('adminPanel','block'); onAdminReady(); }
+}
+function doLogin() {
+  if (document.getElementById('loginInput').value===PASS) {
+    sessionStorage.setItem('admin_ok','1'); _authed=true;
+    show('loginArea','none'); show('adminPanel','block'); onAdminReady();
+  } else { show('loginErr','block'); }
+}
+function adminLogout() { sessionStorage.removeItem('admin_ok'); _authed=false; show('loginArea','block'); show('adminPanel','none'); }
+function show(id,d) { document.getElementById(id).style.display=d; }
+
+function onAdminReady() {
+  populateSelects();
+  updateStats();
+  renderAnnouncements();
+  renderSchedule();
+  renderResources();
+  renderDbTable();
+  updateOnline();
+  const saved = localStorage.getItem('gemini_api_key')||'';
+  if (saved) document.getElementById('geminiKey').value=saved;
+}
+function onDataLoaded() { if(_authed) onAdminReady(); else checkAuth(); }
+
+// ── Navigation ────────────────────────────────────────────────────────────────
+function showSec(id) {
+  document.querySelectorAll('.sec').forEach(s=>s.classList.remove('active'));
+  document.getElementById('admin-'+id).classList.add('active');
+  document.querySelectorAll('.snav-btn').forEach(b=>b.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  if(id==='students') refreshPresence();
+}
+
+// ── Selects ───────────────────────────────────────────────────────────────────
+function populateSelects() {
+  ['noteCourse','topicsCourse','mcqCourse','cardCourse','resCourse','resViewCourse'].forEach(id=>{
+    const el=document.getElementById(id); if(!el)return;
+    el.innerHTML=APP_DATA.courses.map(c=>`<option value="${c.id}">${c.short} — ${c.name}</option>`).join('');
+  });
+  document.getElementById('topicsCourse').addEventListener('change',renderTopics);
+  renderTopics();
+}
+
+// ── Stats ─────────────────────────────────────────────────────────────────────
+function updateStats() {
+  let t=0,q=0,f=0,r=0;
+  APP_DATA.courses.forEach(c=>{
+    t+=Object.keys(APP_DATA.notes[c.id]||{}).length;
+    q+=(APP_DATA.quizzes[c.id]||[]).length;
+    f+=(APP_DATA.flashcards[c.id]||[]).length;
+    r+=(APP_DATA.resources?.[c.id]||[]).length;
+  });
+  document.getElementById('st-t').textContent=t;
+  document.getElementById('st-q').textContent=q;
+  document.getElementById('st-f').textContent=f;
+  document.getElementById('st-r').textContent=r;
+  updateOnline();
+}
+function updateOnline() {
+  const n=getOnlineCount();
+  document.getElementById('st-o').textContent=n;
+  const p=document.getElementById('onlinePill');
+  p.style.display='inline-flex';
+  document.getElementById('onlineN').textContent=n;
+}
+
+// ── Notes ─────────────────────────────────────────────────────────────────────
+function previewNotes() {
+  const md=document.getElementById('noteContent').value.trim();
+  if(!md){_toast('Paste some notes first','error');return;}
+  const box=document.getElementById('notePreviewBox');
+  document.getElementById('notePreview').innerHTML=renderMarkdown(md);
+  box.style.display=box.style.display==='none'?'block':'none';
+}
+async function saveNotes() {
+  const courseId=document.getElementById('noteCourse').value;
+  const topic=document.getElementById('noteTopic').value.trim();
+  const md=document.getElementById('noteContent').value.trim();
+  const summary=document.getElementById('noteSummary').value.trim();
+  if(!topic){_toast('Enter topic name','error');return;}
+  if(!md){_toast('Paste notes content','error');return;}
+  if(!APP_DATA.notes[courseId]) APP_DATA.notes[courseId]={};
+  APP_DATA.notes[courseId][topic]={markdown:md,summary,uploadedAt:new Date().toISOString()};
+  setStatus('noteStatus',`<span class="spinner"></span> Saving…`);
+  await saveData();
+  setStatus('noteStatus',`<span class="ok">✅ "${topic}" saved and live!</span>`);
+  updateStats(); renderTopics(); renderDbTable();
+}
+function clearNoteForm() {
+  document.getElementById('noteTopic').value='';
+  document.getElementById('noteSummary').value='';
+  document.getElementById('noteContent').value='';
+  document.getElementById('notePreviewBox').style.display='none';
+  document.getElementById('noteStatus').textContent='';
+}
+
+// ── Topics ────────────────────────────────────────────────────────────────────
+function renderTopics() {
+  const cId=document.getElementById('topicsCourse').value;
+  const notes=APP_DATA.notes[cId]||{};
+  const topics=Object.keys(notes);
+  const list=document.getElementById('topicsList');
+  if(!topics.length){list.innerHTML='<p style="color:var(--text3);font-size:13px;margin-top:10px">No topics uploaded yet.</p>';return;}
+  list.innerHTML=`<div style="font-size:11px;color:var(--text3);margin-bottom:8px">${topics.length} topic${topics.length!==1?'s':''}</div>`+
+  topics.map(t=>{
+    const qc=(APP_DATA.quizzes[cId]||[]).filter(q=>q.topic===t).length;
+    const fc=(APP_DATA.flashcards[cId]||[]).filter(f=>f.topic===t).length;
+    return`<div class="li"><div class="li-m"><div class="li-t">${t}</div><div class="li-s">${qc} MCQs · ${fc} flashcards</div></div>
+      <div class="li-a">
+        <button class="btn btn-s btn-sm" onclick="previewTopic('${cId}','${t}')">Preview</button>
+        <button class="btn btn-d btn-sm" onclick="deleteTopic('${cId}','${t}')">Delete</button>
+      </div></div>`;
+  }).join('');
+}
+function previewTopic(cId,topic) {
+  const data=APP_DATA.notes[cId][topic];
+  document.getElementById('modalTitle').textContent=topic;
+  document.getElementById('modalBody').innerHTML=`
+    ${data.summary?`<p style="font-style:italic;color:var(--text2);margin-bottom:12px">${data.summary}</p>`:''}
+    <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:14px;font-size:12px;line-height:1.7;max-height:300px;overflow-y:auto;color:var(--text2)">
+      ${renderMarkdown((data.markdown||'').slice(0,2000))}
+    </div>`;
+  document.getElementById('modal').classList.add('open');
+}
+async function deleteTopic(cId,topic) {
+  if(!confirm(`Delete "${topic}" and all its MCQs and flashcards?`))return;
+  delete APP_DATA.notes[cId][topic];
+  APP_DATA.quizzes[cId]=(APP_DATA.quizzes[cId]||[]).filter(q=>q.topic!==topic);
+  APP_DATA.flashcards[cId]=(APP_DATA.flashcards[cId]||[]).filter(f=>f.topic!==topic);
+  await saveData(); updateStats(); renderTopics(); renderDbTable();
+  _toast(`"${topic}" deleted.`);
+}
+
+// ── MCQs ──────────────────────────────────────────────────────────────────────
+function previewMCQFile(e) {
+  const file=e.target.files[0]; if(!file)return;
+  const r=new FileReader();
+  r.onload=ev=>{document.getElementById('mcqJson').value=ev.target.result;validateMCQ();};
+  r.readAsText(file);
+}
+function validateMCQ() {
+  const raw=document.getElementById('mcqJson').value.trim();
+  const prev=document.getElementById('mcqPreview');
+  const st=document.getElementById('mcqStatus');
+  if(!raw){prev.textContent='';return;}
+  try {
+    const items=parseJSON(raw);
+    if(!Array.isArray(items))throw new Error('Must be a JSON array [ ]');
+    const issues=[];
+    items.forEach((q,i)=>{
+      if(!q.q) issues.push(`Item ${i+1}: missing "q" (question)`);
+      if(!Array.isArray(q.opts)||q.opts.length<2) issues.push(`Item ${i+1}: "opts" must be array with 2+ options`);
+      if(typeof q.ans!=='number') issues.push(`Item ${i+1}: "ans" must be a number (0-3)`);
+    });
+    if(issues.length){st.innerHTML=`<span class="err">⚠ ${issues.slice(0,3).join(' · ')}</span>`;return;}
+    prev.innerHTML=`<span style="color:var(--success)">✅ ${items.length} valid questions found</span> · Sample: "${items[0].q.slice(0,60)}…"`;
+    st.textContent='';
+  } catch(e){
+    st.innerHTML=`<span class="err">❌ Invalid JSON: ${e.message}</span>`;
+    prev.textContent='';
+  }
+}
+async function uploadMCQs() {
+  const cId=document.getElementById('mcqCourse').value;
+  const topic=document.getElementById('mcqTopic').value.trim();
+  const raw=document.getElementById('mcqJson').value.trim();
+  if(!topic){_toast('Enter topic name','error');return;}
+  if(!raw){_toast('Paste or upload JSON first','error');return;}
+  try {
+    const items=parseJSON(raw);
+    if(!Array.isArray(items)||!items.length)throw new Error('Empty or invalid array');
+    // Tag with topic if not set
+    items.forEach(q=>{if(!q.topic)q.topic=topic;});
+    if(!APP_DATA.quizzes[cId]) APP_DATA.quizzes[cId]=[];
+    APP_DATA.quizzes[cId]=APP_DATA.quizzes[cId].filter(q=>q.topic!==topic);
+    APP_DATA.quizzes[cId].push(...items);
+    setStatus('mcqStatus',`<span class="spinner"></span> Uploading…`);
+    await saveData(); updateStats(); renderDbTable();
+    setStatus('mcqStatus',`<span class="ok">✅ ${items.length} MCQs uploaded for "${topic}"!</span>`);
+    _toast(`${items.length} MCQs live!`);
+  } catch(e) { setStatus('mcqStatus',`<span class="err">❌ ${e.message}</span>`); }
+}
+
+// ── Flashcards ────────────────────────────────────────────────────────────────
+function previewCardFile(e) {
+  const file=e.target.files[0]; if(!file)return;
+  const r=new FileReader();
+  r.onload=ev=>{document.getElementById('cardJson').value=ev.target.result;validateCard();};
+  r.readAsText(file);
+}
+function validateCard() {
+  const raw=document.getElementById('cardJson').value.trim();
+  const prev=document.getElementById('cardPreview');
+  const st=document.getElementById('cardStatus');
+  if(!raw){prev.textContent='';return;}
+  try {
+    const items=parseJSON(raw);
+    if(!Array.isArray(items))throw new Error('Must be a JSON array');
+    const issues=[];
+    items.forEach((f,i)=>{
+      if(!f.q) issues.push(`Item ${i+1}: missing "q"`);
+      if(!f.a) issues.push(`Item ${i+1}: missing "a"`);
+    });
+    if(issues.length){st.innerHTML=`<span class="err">⚠ ${issues.slice(0,3).join(' · ')}</span>`;return;}
+    prev.innerHTML=`<span style="color:var(--success)">✅ ${items.length} valid flashcards found</span>`;
+    st.textContent='';
+  } catch(e){st.innerHTML=`<span class="err">❌ ${e.message}</span>`;prev.textContent='';}
+}
+async function uploadCards() {
+  const cId=document.getElementById('cardCourse').value;
+  const topic=document.getElementById('cardTopic').value.trim();
+  const raw=document.getElementById('cardJson').value.trim();
+  if(!topic){_toast('Enter topic name','error');return;}
+  if(!raw){_toast('Paste or upload JSON','error');return;}
+  try {
+    const items=parseJSON(raw);
+    if(!Array.isArray(items)||!items.length)throw new Error('Empty or invalid');
+    items.forEach(f=>{if(!f.topic)f.topic=topic;});
+    if(!APP_DATA.flashcards[cId]) APP_DATA.flashcards[cId]=[];
+    APP_DATA.flashcards[cId]=APP_DATA.flashcards[cId].filter(f=>f.topic!==topic);
+    APP_DATA.flashcards[cId].push(...items);
+    setStatus('cardStatus',`<span class="spinner"></span> Uploading…`);
+    await saveData(); updateStats(); renderDbTable();
+    setStatus('cardStatus',`<span class="ok">✅ ${items.length} flashcards uploaded!</span>`);
+    _toast(`${items.length} flashcards live!`);
+  } catch(e){setStatus('cardStatus',`<span class="err">❌ ${e.message}</span>`);}
+}
+
+// ── Resources ─────────────────────────────────────────────────────────────────
+function selResType(btn) {
+  _resType=btn.dataset.t;
+  document.querySelectorAll('.rtype').forEach(b=>b.classList.toggle('active',b===btn));
+}
+async function addResource() {
+  const cId=document.getElementById('resCourse').value;
+  const topic=document.getElementById('resTopic').value.trim();
+  const title=document.getElementById('resTitle').value.trim();
+  const url=document.getElementById('resUrl').value.trim();
+  if(!title||!url){_toast('Title and URL required','error');return;}
+  if(!APP_DATA.resources) APP_DATA.resources={};
+  if(!APP_DATA.resources[cId]) APP_DATA.resources[cId]=[];
+  APP_DATA.resources[cId].push({title,url,type:_resType,topic:topic||null,uploadedAt:new Date().toISOString()});
+  await saveData(); updateStats(); renderResources();
+  document.getElementById('resTitle').value=''; document.getElementById('resUrl').value=''; document.getElementById('resTopic').value='';
+  _toast(`Resource added!`);
+}
+function renderResources() {
+  const cId=document.getElementById('resViewCourse')?.value||APP_DATA.courses[0]?.id;
+  if(!cId)return;
+  document.getElementById('resViewCourse').value=cId;
+  const list=document.getElementById('resList');
+  const res=(APP_DATA.resources?.[cId])||[];
+  if(!res.length){list.innerHTML='<p style="color:var(--text3);font-size:13px;margin-top:8px">No resources yet.</p>';return;}
+  const icons={pdf:'📄',link:'🔗',video:'🎥',pastpaper:'📋',slides:'📊'};
+  list.innerHTML=res.map((r,i)=>`<div class="li">
+    <div style="font-size:18px;flex-shrink:0">${icons[r.type]||'📎'}</div>
+    <div class="li-m"><div class="li-t"><a href="${r.url}" target="_blank" style="color:var(--text)">${r.title}</a></div>
+      <div class="li-s">${r.type.toUpperCase()}${r.topic?' · '+r.topic:''}</div></div>
+    <div class="li-a"><button class="btn btn-d btn-sm" onclick="delResource('${cId}',${i})">Del</button></div>
+  </div>`).join('');
+}
+async function delResource(cId,i) {
+  APP_DATA.resources[cId].splice(i,1);
+  await saveData(); updateStats(); renderResources(); _toast('Deleted.');
+}
+
+// ── Announcements ─────────────────────────────────────────────────────────────
+async function postAnn() {
+  const msg=document.getElementById('annMsg').value.trim();
+  const type=document.getElementById('annType').value;
+  if(!msg){_toast('Type a message','error');return;}
+  APP_DATA.announcements.unshift({id:'ann_'+Date.now(),type,msg,date:new Date().toISOString()});
+  await saveData(); document.getElementById('annMsg').value=''; renderAnnouncements(); _toast('Announcement posted!');
+}
+function renderAnnouncements() {
+  const list=document.getElementById('annList');
+  const anns=APP_DATA.announcements||[];
+  if(!anns.length){list.innerHTML='<p style="color:var(--text3);font-size:13px;margin-top:8px">No announcements.</p>';return;}
+  const ico={info:'📢',warning:'⚠️',success:'✅',danger:'🔴'};
+  list.innerHTML=anns.map(a=>`<div class="li">
+    <div class="li-m"><div class="li-t">${ico[a.type]||'📢'} ${a.msg}</div>
+      <div class="li-s">${new Date(a.date).toLocaleDateString('en-PK',{weekday:'short',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}</div></div>
+    <div class="li-a"><button class="btn btn-d btn-sm" onclick="delAnn('${a.id}')">Remove</button></div>
+  </div>`).join('');
+}
+async function delAnn(id) {
+  APP_DATA.announcements=APP_DATA.announcements.filter(a=>a.id!==id);
+  await saveData(); renderAnnouncements(); _toast('Removed.');
+}
+
+// ── Schedule ──────────────────────────────────────────────────────────────────
+function renderSchedule() {
+  document.getElementById('schedList').innerHTML=APP_DATA.courses.map(c=>`
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:10px">
+      <div style="font-weight:600;font-size:13px;margin-bottom:10px">${c.icon} ${c.name}</div>
+      <div class="g3">
+        <div class="fg" style="margin:0"><label class="fl">Date & Time</label><input type="datetime-local" class="fi" id="sd_${c.id}" value="${c.examDate?.slice(0,16)||''}"></div>
+        <div class="fg" style="margin:0"><label class="fl">End Time</label><input type="datetime-local" class="fi" id="se_${c.id}" value="${c.examEnd?.slice(0,16)||''}"></div>
+        <div class="fg" style="margin:0"><label class="fl">Room</label><input type="text" class="fi" id="sr_${c.id}" value="${c.room||''}" placeholder="CL-05"></div>
+      </div>
+    </div>`).join('');
+}
+async function saveSched() {
+  APP_DATA.courses.forEach(c=>{
+    const d=document.getElementById(`sd_${c.id}`)?.value;
+    const e=document.getElementById(`se_${c.id}`)?.value;
+    const r=document.getElementById(`sr_${c.id}`)?.value;
+    if(d)c.examDate=d; if(e)c.examEnd=e; if(r)c.room=r;
+  });
+  await saveData(); _toast('Schedule saved!');
+}
+
+// ── Live Students ─────────────────────────────────────────────────────────────
+async function refreshPresence() {
+  try {
+    const res=await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`,{headers:{'X-Master-Key':MASTER_KEY}});
+    if(res.ok){const{record}=await res.json();if(record.presence)APP_DATA.presence=record.presence;}
+  }catch(e){}
+  const now=Date.now();
+  const active=Object.entries(APP_DATA.presence||{}).filter(([,p])=>now-p.ts<180000);
+  document.getElementById('onlineBig').textContent=active.length;
+  document.getElementById('onlineN').textContent=active.length;
+  document.getElementById('st-o').textContent=active.length;
+
+  const pl=document.getElementById('presenceList');
+  pl.innerHTML=active.length?active.map(([,p])=>`<div class="presence-item">
+    <span>${p.name||'Student'}</span>
+    <span style="font-size:10px;color:var(--text3);font-family:var(--mono)">${p.page||'—'}</span>
+    <span style="font-size:10px;color:var(--text3)">${Math.round((now-p.ts)/60000)}m ago</span>
+  </div>`).join(''):`<div style="color:var(--text3);font-size:12px;padding:8px 0">No students online recently.</div>`;
+
+  const pageCounts={};
+  active.forEach(([,p])=>{const pg=p.page||'Unknown';pageCounts[pg]=(pageCounts[pg]||0)+1;});
+  const total=active.length||1;
+  document.getElementById('pageDist').innerHTML=Object.entries(pageCounts).map(([pg,n])=>`<div class="prog-row">
+    <span style="min-width:80px;color:var(--text2)">${pg}</span>
+    <div class="prog-bar"><div class="prog-fill" style="width:${Math.round(n/total*100)}%"></div></div>
+    <span style="color:var(--text3);font-family:var(--mono)">${n}</span>
+  </div>`).join('')||'<p style="color:var(--text3);font-size:12px">No data.</p>';
+}
+
+// ── Settings ──────────────────────────────────────────────────────────────────
+function saveGeminiKey() {
+  const k=document.getElementById('geminiKey').value.trim();
+  if(k&&!k.startsWith('AIzaSy')){setStatus('keyStatus','<span class="err">❌ Key should start with "AIzaSy"</span>');return;}
+  if(k) localStorage.setItem('gemini_api_key',k);
+  else localStorage.removeItem('gemini_api_key');
+  setStatus('keyStatus',`<span class="ok">✅ Key ${k?'saved':'cleared'}.</span>`);
+}
+async function testGeminiKey() {
+  setStatus('keyStatus','<span class="spinner"></span> Testing…');
+  try {
+    const ans=await geminiAsk('Say "API key is working" and nothing else.');
+    setStatus('keyStatus',`<span class="ok">✅ Working! Response: "${ans.slice(0,60)}"</span>`);
+  } catch(e) { setStatus('keyStatus',`<span class="err">❌ ${e.message}</span>`); }
+}
+function clearGeminiKey() { localStorage.removeItem('gemini_api_key'); document.getElementById('geminiKey').value=''; setStatus('keyStatus','Key cleared.'); }
+
+// ── Database ──────────────────────────────────────────────────────────────────
+function renderDbTable() {
+  document.getElementById('dbBody').innerHTML=APP_DATA.courses.map(c=>{
+    const t=Object.keys(APP_DATA.notes[c.id]||{}).length;
+    const q=(APP_DATA.quizzes[c.id]||[]).length;
+    const f=(APP_DATA.flashcards[c.id]||[]).length;
+    const r=(APP_DATA.resources?.[c.id]||[]).length;
+    return`<tr><td style="color:var(--accent2)">${c.icon} ${c.short}</td><td>${t}</td><td>${q}</td><td>${f}</td><td>${r}</td></tr>`;
+  }).join('');
+}
+function exportData() {
+  const a=document.createElement('a');
+  a.href='data:application/json,'+encodeURIComponent(JSON.stringify(APP_DATA,null,2));
+  a.download=`bcs3a-${new Date().toISOString().slice(0,10)}.json`; a.click();
+}
+function importData(e) {
+  const file=e.target.files[0]; if(!file)return;
+  const r=new FileReader();
+  r.onload=async ev=>{
+    try {
+      const d=JSON.parse(ev.target.result);
+      if(d.notes)APP_DATA.notes=d.notes;if(d.quizzes)APP_DATA.quizzes=d.quizzes;
+      if(d.flashcards)APP_DATA.flashcards=d.flashcards;if(d.announcements)APP_DATA.announcements=d.announcements;
+      if(d.resources)APP_DATA.resources=d.resources;
+      await saveData(); updateStats(); renderDbTable(); renderAnnouncements(); renderResources();
+      _toast('Data imported!');
+    } catch(err){_toast('Invalid JSON file','error');}
+  };
+  r.readAsText(file);
+}
+async function confirmReset() {
+  if(!confirm('Delete ALL notes, MCQs, flashcards, resources, announcements?'))return;
+  if(!confirm('This is permanent. Confirm?'))return;
+  APP_DATA.notes={};APP_DATA.quizzes={};APP_DATA.flashcards={};APP_DATA.announcements=[];APP_DATA.resources={};
+  await saveData(); updateStats(); renderTopics(); renderDbTable(); renderAnnouncements(); renderResources();
+  _toast('All data reset.','error');
+}
+
+// ── Utils ─────────────────────────────────────────────────────────────────────
+function parseJSON(raw) {
+  let s=raw.trim().replace(/^```json\s*/i,'').replace(/^```\s*/,'').replace(/\s*```\s*$/,'').trim();
+  if(!s.startsWith('[')){const m=s.match(/(\[[\s\S]*\])/);if(m)s=m[1];}
+  return JSON.parse(s);
+}
+function setStatus(id,html){document.getElementById(id).innerHTML=html;}
+function closeModal(){document.getElementById('modal').classList.remove('open');}
+document.getElementById('modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeModal();});
+
+function _toast(msg,type='success'){
+  const c=document.getElementById('toast-c');
+  const t=document.createElement('div');
+  t.style.cssText=`background:${type==='error'?'#1a0000':'#001a00'};border:1px solid ${type==='error'?'var(--danger)':'var(--success)'};color:${type==='error'?'var(--danger)':'var(--success)'};padding:10px 18px;border-radius:8px;font-size:12px;transform:translateX(120%);transition:transform .3s ease;box-shadow:0 8px 24px rgba(0,0,0,.5)`;
+  t.textContent=msg;c.appendChild(t);
+  requestAnimationFrame(()=>t.style.transform='translateX(0)');
+  setTimeout(()=>{t.style.transform='translateX(120%)';setTimeout(()=>t.remove(),400);},3500);
+}
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+checkAuth();
+setInterval(()=>{updateOnline();},90000);
+</script>
+</body>
+</html>
