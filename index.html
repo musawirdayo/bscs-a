@@ -57,7 +57,7 @@
   <div id="announcementsZone"></div>
 
   <!-- Hero -->
-  <section class="hero-section">
+  <section class="hero"> 
     <div class="hero-text">
       <p class="hero-eyebrow">Mid Exam Season · Spring 2026</p>
       <h1 class="hero-heading">Your exams<br>start <span class="highlight" id="daysUntilFirst">—</span></h1>
@@ -67,11 +67,11 @@
         <span class="name-badge" id="nameBadge" onclick="changeName()">👤 <span id="nameLabel">Student</span> ▾</span>
       </div>
     </div>
-    <div class="next-exam-card">
-      <p class="nec-label">⏱ Countdown to next exam</p>
+    <div class="nec"> 
+      <p class="nec-lbl">⏱ Countdown to next exam</p> 
       <p class="nec-course" id="nextExamName">Loading…</p>
       <p class="nec-teacher" id="nextExamTeacher"></p>
-      <div class="countdown-row">
+      <div class="cd-row"> 
         <div class="cd-unit"><span class="cd-num" id="cd-d">0</span><span class="cd-lbl">days</span></div>
         <div class="cd-sep">:</div>
         <div class="cd-unit"><span class="cd-num" id="cd-h">00</span><span class="cd-lbl">hrs</span></div>
@@ -111,7 +111,7 @@
   <!-- Progress -->
   <section class="section">
     <h2 class="section-title">📊 Your Progress</h2>
-    <div class="progress-grid" id="progressGrid"></div>
+    <div class="prog-grid" id="progressGrid"></div>
   </section>
 
   <!-- Quick Actions -->
@@ -245,9 +245,9 @@ function renderCourses() {
       <div class="cc-teacher">👤 ${c.teacher}</div>
       <div class="cc-footer">
         <span style="font-size:11px;color:var(--text3)">${read}/${topics.length} read · ${qCount} MCQs</span>
-        <span class="cc-exam-badge">${days>0?days+'d left':'Done'}</span>
+        <span class="cc-exam">${days>0?days+'d left':'Done'}</span>
       </div>
-      <div class="cc-progress-bar"><div class="cc-progress-fill" style="width:${pct}%;background:${color}"></div></div>
+      <div class="cc-pbar"><div class="cc-pfill" style="width:${pct}%;background:${color}"></div></div>
     </a>`;
   }).join('');
 }
@@ -271,7 +271,7 @@ function renderProgress() {
     totalTopics += topics.length; totalRead += read;
     const color  = colorMap[c.color] || '#6c63ff';
     return `<div class="prog-card">
-      <div class="prog-card-header">
+      <div class="prog-card-head">
         <span class="prog-course">${c.icon} ${c.short}</span>
         <span class="prog-pct">${read}/${topics.length} <span style="color:${color}">${pct}%</span></span>
       </div>
