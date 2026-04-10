@@ -481,39 +481,86 @@ function clearNoteForm() {
 
 // ── Topics ────────────────────────────────────────────────────────────────────
 function renderTopics() {
-  const cId=document.getElementById('topicsCourse').value;
-  const notes=APP_DATA.notes[cId]||{};
-  const topics=Object.keys(notes);
-  const list=document.getElementById('topicsList');
-  if(!topics.length){list.innerHTML='<p style="color:var(--text3);font-size:13px;margin-top:10px">No topics uploaded yet.</p>';return;}
-  list.innerHTML=`<div style="font-size:11px;color:var(--text3);margin-bottom:8px">${topics.length} topic${topics.length!==1?'s':''}</div>`+
-  topics.map(t=>{
-    const qc=(APP_DATA.quizzes[cId]||[]).filter(q=>q.topic===t).length;
-    const fc=(APP_DATA.flashcards[cId]||[]).filter(f=>f.topic===t).length;
-    return`<div class="li"><div class="li-m"><div class="li-t">${t}</div><div class="li-s">${qc} MCQs · ${fc} flashcards</div></div>
-      <div class="li-a">
-        <button class="btn btn-s btn-sm" onclick="previewTopic('${cId}','${t}')">Preview</button>
-        <button class="btn btn-d btn-sm" onclick="deleteTopic('${cId}','${t}')">Delete</button>
-      </div></div>`;
-  }).join('');
+  const cId = document.getElementById('topicsCourse').value;
+  
+  // 1. Gather all unique topics from notes, mcqs, and flashcards
+  const nTopics = Object.keys(APP_DATA.notes[cId] || {});
+  const qTopics = (APP_DATA.quizzes[cId] || []).map(q => q.topic).filter(Boolean);
+  const fTopics = (APP_DATA.flashcards[cId] || []).map(f => f.topic).filter(Boolean);
+  
+  // Create a master list of all unique topics
+  const topics = [...new Set([...nTopics, ...qTopics, ...fTopics])].sort();
+  
+  const list = document.getElementById('topicsList');
+  if (!topics.length) {
+    list.innerHTML = '<p style="color:var(--text3);font-size:13px;margin-top:10px">No topics uploaded yet.</p>';
+    return;
+  }
+  
+  list.innerHTML = `<div style="font-size:11px;color:var(--text3);margin-bottom:8px">${topics.length} topic${topics.length!==1?'s':''}</div>` +
+    topics.map(t => {
+      const hasNotes = !!(APP_DATA.notes[cId] && APP_DATA.notes[cId][t]);
+      const qc = (APP_DATA.quizzes[cId] || []).filter(q => q.topic === t).length;
+      const fc = (APP_DATA.flashcards[cId] || []).filter(f => f.topic === t).length;
+      
+      return `<div class="li" style="flex-direction:column; gap:12px; align-items:stretch">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start">
+          <div class="li-m">
+            <div class="li-t" style="font-size:14px; color:var(--accent2)">📂 ${t}</div>
+            <div class="li-s" style="margin-top:4px">
+              ${hasNotes ? '<span style="color:var(--green)">📝 Notes exist</span>' : '<span style="color:var(--text3)">📝 No notes</span>'} <span style="opacity:0.3">|</span> 
+              ${qc > 0 ? `<span style="color:var(--amber)">🎯 ${qc} MCQs</span>` : '<span style="color:var(--text3)">🎯 0 MCQs</span>'} <span style="opacity:0.3">|</span> 
+              ${fc > 0 ? `<span style="color:var(--accent)">⚡ ${fc} Flashcards</span>` : '<span style="color:var(--text3)">⚡ 0 Cards</span>'}
+            </div>
+          </div>
+          <button class="btn btn-d btn-sm" onclick="deleteEntireTopic('${cId}','${t}')" title="Delete Everything">🗑 Delete All</button>
+        </div>
+        <div style="display:flex; gap:6px; flex-wrap:wrap; padding-top:8px; border-top:1px solid var(--border2)">
+          ${hasNotes ? `<button class="btn btn-s btn-sm" onclick="previewTopic('${cId}','${t}')">👁 Preview Notes</button>
+                        <button class="btn btn-s btn-sm" onclick="deleteSubItem('${cId}','${t}','notes')">✕ Clear Notes</button>` : ''}
+          ${qc > 0 ? `<button class="btn btn-s btn-sm" onclick="deleteSubItem('${cId}','${t}','mcqs')">✕ Clear MCQs</button>` : ''}
+          ${fc > 0 ? `<button class="btn btn-s btn-sm" onclick="deleteSubItem('${cId}','${t}','cards')">✕ Clear Flashcards</button>` : ''}
+        </div>
+      </div>`;
+    }).join('');
 }
-function previewTopic(cId,topic) {
-  const data=APP_DATA.notes[cId][topic];
-  document.getElementById('modalTitle').textContent=topic;
-  document.getElementById('modalBody').innerHTML=`
-    ${data.summary?`<p style="font-style:italic;color:var(--text2);margin-bottom:12px">${data.summary}</p>`:''}
+
+function previewTopic(cId, topic) {
+  const data = APP_DATA.notes[cId][topic];
+  if(!data) return;
+  document.getElementById('modalTitle').textContent = topic;
+  document.getElementById('modalBody').innerHTML = `
+    ${data.summary ? `<p style="font-style:italic;color:var(--text2);margin-bottom:12px">${data.summary}</p>` : ''}
     <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:14px;font-size:12px;line-height:1.7;max-height:300px;overflow-y:auto;color:var(--text2)">
-      ${renderMarkdown((data.markdown||'').slice(0,2000))}
+      ${renderMarkdown((data.markdown || '').slice(0, 2000))}
     </div>`;
   document.getElementById('modal').classList.add('open');
 }
-async function deleteTopic(cId,topic) {
-  if(!confirm(`Delete "${topic}" and all its MCQs and flashcards?`))return;
-  delete APP_DATA.notes[cId][topic];
-  APP_DATA.quizzes[cId]=(APP_DATA.quizzes[cId]||[]).filter(q=>q.topic!==topic);
-  APP_DATA.flashcards[cId]=(APP_DATA.flashcards[cId]||[]).filter(f=>f.topic!==topic);
+
+async function deleteSubItem(cId, topic, type) {
+  if (!confirm(`Are you sure you want to delete ONLY the ${type.toUpperCase()} for "${topic}"?`)) return;
+  
+  if (type === 'notes') {
+    delete APP_DATA.notes[cId][topic];
+  } else if (type === 'mcqs') {
+    APP_DATA.quizzes[cId] = (APP_DATA.quizzes[cId] || []).filter(q => q.topic !== topic);
+  } else if (type === 'cards') {
+    APP_DATA.flashcards[cId] = (APP_DATA.flashcards[cId] || []).filter(f => f.topic !== topic);
+  }
+  
   await saveData(); updateStats(); renderTopics(); renderDbTable();
-  _toast(`"${topic}" deleted.`);
+  _toast(`${type.toUpperCase()} deleted for "${topic}".`);
+}
+
+async function deleteEntireTopic(cId, topic) {
+  if (!confirm(`Delete "${topic}" entirely? This permanently removes ALL notes, MCQs, and flashcards for this topic.`)) return;
+  
+  if (APP_DATA.notes[cId]) delete APP_DATA.notes[cId][topic];
+  APP_DATA.quizzes[cId] = (APP_DATA.quizzes[cId] || []).filter(q => q.topic !== topic);
+  APP_DATA.flashcards[cId] = (APP_DATA.flashcards[cId] || []).filter(f => f.topic !== topic);
+  
+  await saveData(); updateStats(); renderTopics(); renderDbTable();
+  _toast(`Entire topic "${topic}" deleted.`);
 }
 
 // ── MCQs ──────────────────────────────────────────────────────────────────────
