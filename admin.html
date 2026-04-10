@@ -555,7 +555,7 @@ async function uploadMCQs() {
     const items=parseJSON(raw);
     if(!Array.isArray(items)||!items.length)throw new Error('Empty or invalid array');
     // Tag with topic if not set
-    items.forEach(q=>{if(!q.topic)q.topic=topic;});
+    items.forEach(q=>{ q.topic=topic; });
     if(!APP_DATA.quizzes[cId]) APP_DATA.quizzes[cId]=[];
     APP_DATA.quizzes[cId]=APP_DATA.quizzes[cId].filter(q=>q.topic!==topic);
     APP_DATA.quizzes[cId].push(...items);
@@ -600,7 +600,7 @@ async function uploadCards() {
   try {
     const items=parseJSON(raw);
     if(!Array.isArray(items)||!items.length)throw new Error('Empty or invalid');
-    items.forEach(f=>{if(!f.topic)f.topic=topic;});
+    items.forEach(f=>{ f.topic=topic; })
     if(!APP_DATA.flashcards[cId]) APP_DATA.flashcards[cId]=[];
     APP_DATA.flashcards[cId]=APP_DATA.flashcards[cId].filter(f=>f.topic!==topic);
     APP_DATA.flashcards[cId].push(...items);
