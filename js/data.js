@@ -9,15 +9,12 @@ const APP_DATA = {
     { id:"calc", code:"MTH101", name:"Calculus and Analytic Geometry",        short:"Calculus",teacher:"Dr. Saqib Zia",        icon:"∫",  color:"calc", examDate:"2026-04-20T10:20:00", examEnd:"2026-04-20T11:50:00", room:"CL-07, CL-08" },
     { id:"db",   code:"CSC221", name:"Database Systems",                      short:"DB",      teacher:"Dr. Rubina Adnan",     icon:"🗄", color:"db",   examDate:"2026-04-21T14:00:00", examEnd:"2026-04-21T15:30:00", room:"CL-09, CL-10" }
   ],
-  // notes[courseId][topicName] = { markdown: "# Heading\n**bold**...", summary:"" }
   notes:         {},
-  // quizzes[courseId] = [ {q, opts:["A.x","B.y","C.z","D.w"], ans:0, exp:"", topic:"", difficulty:"easy|medium|hard"} ]
   quizzes:       {},
-  // flashcards[courseId] = [ {q, a, topic} ]
   flashcards:    {},
-  announcements: [],  // [ {id, type, msg, date} ]
-  resources:     {},  // { courseId: [{title, url, type, topic, uploadedAt}] }
-  presence:      {}   // { sessionId: {name, page, ts} }
+  announcements: [],
+  resources:     {},
+  presence:      {} 
 };
 
 // ─── Cloud (JSONBin) ──────────────────────────────────────────────────────────
@@ -27,49 +24,75 @@ const MASTER_KEY = '$2a$10$71mUhVOOXOpiRPD96MDIDenFdtAoL9GG5B7Z8yqijyH.Fx6xCQWJ6
 
 let _syncStatus = 'idle';
 
+// ─── Compression Engine ───────────────────────────────────────────────────────
+// Invisibly loads LZ-String to compress data by 80%+ to bypass the 100kb limit
+async function initCloud() {
+  return new Promise((resolve) => {
+    if (window.LZString) return resolve();
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js';
+    script.onload = resolve;
+    script.onerror = resolve; // fail safely if offline
+    document.head.appendChild(script);
+  });
+}
+
 async function saveData() {
   _syncStatus = 'saving'; _notifySyncStatus();
   try {
-    // We remove the fast-moving 'presence' data before saving to the main bin to save space!
+    await initCloud(); // Load the compressor
+    
+    // 1. Clone data and remove presence so we don't save it to the main bin
     const dataToSave = JSON.parse(JSON.stringify(APP_DATA));
     delete dataToSave.presence;
 
+    // 2. Compress the massive JSON into a tiny Base64 string
+    const rawString = JSON.stringify(dataToSave);
+    const compressedString = LZString.compressToBase64(rawString);
+
+    // 3. Wrap it in a payload flag so the system knows to decompress it later
+    const payload = { _compressed: true, data: compressedString };
+
     const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
       method:'PUT', headers:{'Content-Type':'application/json','X-Master-Key':MASTER_KEY},
-      body: JSON.stringify(dataToSave)
+      body: JSON.stringify(payload)
     });
-    
+
     if (res.ok) {
       _syncStatus = 'saved';
-      _toast('✅ Saved & deployed to all students.');
+      _toast('✅ Compressed & Saved to cloud!');
     } else {
       const err = await res.json();
       _syncStatus = 'error';
-      _toast('❌ Save failed.', 'error');
-      
-      // THIS WILL POP UP THE EXACT SERVER ERROR
-      alert("CLOUD ERROR:\n" + (err.message || res.statusText) + "\n\nIf it says 'Payload Too Large', your database is full (100KB limit).");
+      _toast('❌ Save failed. Database full?', 'error');
+      alert("CLOUD ERROR:\n" + (err.message || res.statusText));
     }
-  } catch(e) { 
-    _syncStatus='error'; 
-    _toast('❌ Network error.','error'); 
-  }
+  } catch(e) { _syncStatus='error'; _toast('❌ Network error.','error'); }
   _notifySyncStatus();
 }
 
 async function loadData() {
   _syncStatus = 'loading'; _notifySyncStatus();
   try {
-    const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`,
-      { headers:{'X-Master-Key':MASTER_KEY} });
+    await initCloud(); // Load the compressor
+
+    const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, { headers:{'X-Master-Key':MASTER_KEY} });
     if (res.ok) {
-      const { record } = await res.json();
+      const json = await res.json();
+      let record = json.record;
+
+      // 💥 THE MAGIC: If it detects the compressed format, decompress it!
+      if (record && record._compressed) {
+        const decompressed = LZString.decompressFromBase64(record.data);
+        record = JSON.parse(decompressed);
+      }
+
       if (record.notes)         APP_DATA.notes         = record.notes         || {};
       if (record.quizzes)       APP_DATA.quizzes       = record.quizzes       || {};
       if (record.flashcards)    APP_DATA.flashcards    = record.flashcards    || {};
       if (record.announcements) APP_DATA.announcements = record.announcements || [];
       if (record.resources)     APP_DATA.resources     = record.resources     || {};
-      if (record.presence)      APP_DATA.presence      = record.presence      || {};
+
       if (record.courses) {
         record.courses.forEach(rc => {
           const lc = APP_DATA.courses.find(c => c.id === rc.id);
@@ -89,7 +112,6 @@ const _SID  = (() => { let i=sessionStorage.getItem('bcs_sid'); if(!i){i='u'+Mat
 async function _pingPresence() {
   const now = Date.now();
   try {
-    // 1. Fetch ONLY the presence data from your NEW bin
     const res = await fetch(`https://api.jsonbin.io/v3/b/${PRESENCE_BIN_ID}/latest`, { headers: {'X-Master-Key': MASTER_KEY} });
     let liveData = { presence: {} };
     if (res.ok) {
@@ -97,17 +119,14 @@ async function _pingPresence() {
        liveData = json.record || { presence: {} };
     }
 
-    // 2. Clean up old inactive users (older than 3 mins)
     Object.keys(liveData.presence).forEach(k => { if (now - liveData.presence[k].ts > 180000) delete liveData.presence[k]; });
 
-    // 3. Add current user
     liveData.presence[_SID] = { 
        name: localStorage.getItem('bcs_name') || 'Student', 
        page: document.title.split('—')[0].trim(), 
        ts: now 
     };
 
-    // 4. Save ONLY back to the NEW presence bin
     await fetch(`https://api.jsonbin.io/v3/b/${PRESENCE_BIN_ID}`, {
        method: 'PUT',
        headers: { 'Content-Type': 'application/json', 'X-Master-Key': MASTER_KEY },
@@ -116,9 +135,8 @@ async function _pingPresence() {
 
     APP_DATA.presence = liveData.presence;
 
-    // 5. Force the UI to update the counters immediately!
-    if (typeof updateOnlineDisplay === 'function') updateOnlineDisplay(); // Updates Dashboard
-    if (typeof updateStats === 'function') updateStats(); // Updates Admin Stats
+    if (typeof updateOnlineDisplay === 'function') updateOnlineDisplay(); 
+    if (typeof updateStats === 'function') updateStats(); 
 
   } catch(e) {}
 }
@@ -135,18 +153,13 @@ function _notifySyncStatus() {
   });
 }
 
-// ─── Gemini AI — ONLY for "Ask about notes" feature ──────────────────────────
-// Notes, MCQs, and flashcards are uploaded manually (markdown + JSON).
-// AI is only used for the student "Ask AI" chat in the reading view.
-function getGeminiKey() {
-  return localStorage.getItem('gemini_api_key') || '';
-}
+// ─── Gemini AI ───────────────────────────────────────────────────────────────
+function getGeminiKey() { return localStorage.getItem('gemini_api_key') || ''; }
 
 async function geminiAsk(prompt) {
   const key = getGeminiKey();
   if (!key) throw new Error('No Gemini API key set. Go to aistudio.google.com/app/apikey to get a free key, then paste it in Admin → Settings.');
 
-  // Try models in order — gemini-2.0-flash-lite is free & fast as of 2025
   const MODELS = ['gemini-2.0-flash-lite','gemini-1.5-flash','gemini-2.0-flash'];
   let lastErr = 'Unknown';
 
@@ -160,7 +173,6 @@ async function geminiAsk(prompt) {
       if (!res.ok) {
         const e = await res.json().catch(()=>({}));
         lastErr = (e.error&&e.error.message)||`HTTP ${res.status}`;
-        // quota / key error — stop trying models
         if (res.status===400||res.status===403) throw new Error(lastErr);
         continue;
       }
@@ -169,7 +181,7 @@ async function geminiAsk(prompt) {
       if (!text) { lastErr='Empty response'; continue; }
       return text;
     } catch(e) {
-      if (e.message===lastErr) throw e; // already a hard error
+      if (e.message===lastErr) throw e; 
       lastErr = e.message; continue;
     }
   }
@@ -177,18 +189,13 @@ async function geminiAsk(prompt) {
 }
 
 // ─── Markdown → HTML renderer ─────────────────────────────────────────────────
-// Converts ChatGPT-style markdown to rich HTML. No external libraries needed.
 function renderMarkdown(md) {
   if (!md) return '';
   const lines = md.split('\n');
   let html = '';
-  let inList = false;
-  let inOrderedList = false;
-  let inTable = false;
-  let tableHeader = false;
+  let inList = false, inOrderedList = false, inTable = false, tableHeader = false;
 
   const escHtml = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-
   const inlineFormat = s => s
     .replace(/\*\*\*(.+?)\*\*\*/g,'<strong><em>$1</em></strong>')
     .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
@@ -207,59 +214,37 @@ function renderMarkdown(md) {
     const line = lines[i];
     const trimmed = line.trim();
 
-    // Blank line
     if (!trimmed) { closeList(); html += ''; continue; }
-
-    // Headings
     if (/^#{6}\s/.test(trimmed)) { closeList(); html += `<h6 class="note-h6">${inlineFormat(trimmed.slice(7))}</h6>`; continue; }
     if (/^#{5}\s/.test(trimmed)) { closeList(); html += `<h5 class="note-h5">${inlineFormat(trimmed.slice(6))}</h5>`; continue; }
     if (/^#{4}\s/.test(trimmed)) { closeList(); html += `<h4 class="note-h4">${inlineFormat(trimmed.slice(5))}</h4>`; continue; }
     if (/^#{3}\s/.test(trimmed)) { closeList(); html += `<h3 class="note-h3">${inlineFormat(trimmed.slice(4))}</h3>`; continue; }
     if (/^#{2}\s/.test(trimmed)) { closeList(); html += `<h2 class="note-h2">${inlineFormat(trimmed.slice(3))}</h2>`; continue; }
     if (/^#{1}\s/.test(trimmed)) { closeList(); html += `<h1 class="note-h1">${inlineFormat(trimmed.slice(2))}</h1>`; continue; }
-
-    // Horizontal rule
     if (/^(---|\*\*\*|___)\s*$/.test(trimmed)) { closeList(); html += '<hr class="note-hr">'; continue; }
 
-    // Code block
     if (trimmed.startsWith('```')) {
       closeList();
-      const lang = trimmed.slice(3).trim();
-      let code = '';
-      i++;
-      while (i < lines.length && !lines[i].trim().startsWith('```')) {
-        code += escHtml(lines[i]) + '\n';
-        i++;
-      }
-      html += `<pre class="note-code-block"><code>${code.trimEnd()}</code></pre>`;
-      continue;
+      let code = ''; i++;
+      while (i < lines.length && !lines[i].trim().startsWith('```')) { code += escHtml(lines[i]) + '\n'; i++; }
+      html += `<pre class="note-code-block"><code>${code.trimEnd()}</code></pre>`; continue;
     }
 
-    // Blockquote
     if (trimmed.startsWith('> ')) {
-      closeList();
-      html += `<blockquote class="note-blockquote">${inlineFormat(trimmed.slice(2))}</blockquote>`;
-      continue;
+      closeList(); html += `<blockquote class="note-blockquote">${inlineFormat(trimmed.slice(2))}</blockquote>`; continue;
     }
 
-    // Table
     if (trimmed.startsWith('|') && trimmed.endsWith('|')) {
       const cells = trimmed.slice(1,-1).split('|').map(c => c.trim());
-      // Check if this is the separator row
-      if (cells.every(c => /^[-:]+$/.test(c))) {
-        tableHeader = false; // next rows are body
-        continue;
-      }
+      if (cells.every(c => /^[-:]+$/.test(c))) { tableHeader = false; continue; }
       if (!inTable) {
         closeList();
         html += '<table class="note-table"><thead><tr>';
         cells.forEach(c => { html += `<th>${inlineFormat(c)}</th>`; });
         html += '</tr></thead><tbody>';
-        inTable = true; tableHeader = true;
-        continue;
+        inTable = true; tableHeader = true; continue;
       }
       if (tableHeader) {
-        // Still in head
         html += '<tr>'; cells.forEach(c => { html += `<th>${inlineFormat(c)}</th>`; }); html += '</tr>';
       } else {
         html += '<tr>'; cells.forEach(c => { html += `<td>${inlineFormat(c)}</td>`; }); html += '</tr>';
@@ -267,23 +252,18 @@ function renderMarkdown(md) {
       continue;
     } else if (inTable) { closeList(); }
 
-    // Unordered list
     if (/^[-*+]\s/.test(trimmed)) {
       if (inOrderedList) { html += '</ol>'; inOrderedList = false; }
       if (!inList) { html += '<ul class="note-ul">'; inList = true; }
-      html += `<li>${inlineFormat(trimmed.replace(/^[-*+]\s/,''))}</li>`;
-      continue;
+      html += `<li>${inlineFormat(trimmed.replace(/^[-*+]\s/,''))}</li>`; continue;
     }
 
-    // Ordered list
     if (/^\d+\.\s/.test(trimmed)) {
       if (inList) { html += '</ul>'; inList = false; }
       if (!inOrderedList) { html += '<ol class="note-ol">'; inOrderedList = true; }
-      html += `<li>${inlineFormat(trimmed.replace(/^\d+\.\s/,''))}</li>`;
-      continue;
+      html += `<li>${inlineFormat(trimmed.replace(/^\d+\.\s/,''))}</li>`; continue;
     }
 
-    // Special callout patterns (from ChatGPT output)
     if (/^\*\*(Note|Important|Warning|Tip|Key Point|Definition|Formula|Example):\*\*/i.test(trimmed)) {
       closeList();
       const typeMatch = trimmed.match(/^\*\*(\w[\w\s]*):\*\*/i);
@@ -299,20 +279,14 @@ function renderMarkdown(md) {
       continue;
     }
 
-    // Regular paragraph
     closeList();
     if (trimmed) html += `<p class="note-p">${inlineFormat(trimmed)}</p>`;
   }
-
-  closeList();
-  return html;
+  closeList(); return html;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-function getNextExam() {
-  const now = new Date();
-  return APP_DATA.courses.filter(c=>new Date(c.examDate)>now).sort((a,b)=>new Date(a.examDate)-new Date(b.examDate))[0]||null;
-}
+function getNextExam() { const now = new Date(); return APP_DATA.courses.filter(c=>new Date(c.examDate)>now).sort((a,b)=>new Date(a.examDate)-new Date(b.examDate))[0]||null; }
 function formatDate(s) { return new Date(s).toLocaleDateString('en-PK',{weekday:'short',month:'short',day:'numeric'}); }
 function formatTime(s) { return new Date(s).toLocaleTimeString('en-PK',{hour:'2-digit',minute:'2-digit'}); }
 function daysUntil(s) { return Math.ceil((new Date(s)-new Date())/86400000); }
@@ -336,4 +310,4 @@ function toggleMobileNav(){document.getElementById('mobileNav')?.classList.toggl
 
 // ─── Boot ────────────────────────────────────────────────────────────────────
 loadData();
-_pingPresence(); // <-- This forces it to check who is online the second you open the page!
+_pingPresence();
