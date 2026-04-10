@@ -201,7 +201,7 @@ async function geminiGenerate(prompt, statusEl) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.7, maxOutputTokens: 4096 }
+          generationConfig: { temperature: 0.7, maxOutputTokens: 8192 }
         })
       });
 
