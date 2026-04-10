@@ -8,6 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/main.css">
 <style>
+/* Filters */
 .quiz-filter-row { display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1rem;align-items:center }
 .filter-pill {
   padding:5px 14px;background:var(--bg2);border:1px solid var(--border2);
@@ -20,14 +21,38 @@
 .filter-pill.diff-hard  { --c:var(--red);    background:var(--red-dim);    border-color:rgba(239,68,68,.3);  color:var(--red)   }
 .filter-pill.diff-easy.active,.filter-pill.diff-medium.active,.filter-pill.diff-hard.active { opacity:1;box-shadow:0 0 0 2px var(--c) }
 
+/* Empty States */
 .empty-state { text-align:center;padding:4rem 1.5rem;color:var(--text2) }
 .empty-state .big-icon { font-size:48px;display:block;margin-bottom:1rem;opacity:.4 }
 .empty-state h3 { font-size:18px;color:var(--text);margin-bottom:6px }
 
-.q-bookmark { background:none;border:none;cursor:pointer;color:var(--text3);font-size:16px;padding:0;transition:color .2s;line-height:1 }
+/* Beautiful Quiz Card UI Fixes */
+.q-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.25rem; box-shadow: 0 4px 20px rgba(0,0,0,0.15); }
+.q-card-header { display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
+.q-bookmark { background:none;border:none;cursor:pointer;color:var(--text3);font-size:18px;padding:0;transition:color .2s;line-height:1 }
 .q-bookmark:hover,.q-bookmark.active { color:var(--amber) }
-.q-card-header { display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px }
 
+/* Header Elements Separated */
+.q-num { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--text3); font-weight: 600; flex-wrap: wrap; }
+.q-difficulty { padding: 3px 10px; border-radius: 99px; font-size: 10px; text-transform: uppercase; letter-spacing: .06em; font-weight: 700; border: 1px solid transparent; }
+.q-difficulty.easy { background: var(--green-dim); color: var(--green); border-color: rgba(34,197,94,.3); }
+.q-difficulty.medium { background: var(--amber-dim); color: var(--amber); border-color: rgba(245,158,11,.3); }
+.q-difficulty.hard { background: var(--red-dim); color: var(--red); border-color: rgba(239,68,68,.3); }
+
+/* Question & Options Spacing */
+.q-text { font-size: 16px; font-weight: 600; color: var(--text); margin-bottom: 20px; line-height: 1.5; }
+.q-options { display: flex; flex-direction: column; gap: 10px; }
+.q-opt { display: block; width: 100%; text-align: left; padding: 14px 18px; background: var(--bg3); border: 1px solid var(--border2); border-radius: 8px; font-family: var(--font-body); font-size: 14px; color: var(--text2); cursor: pointer; transition: all .2s; line-height: 1.4; }
+.q-opt:hover:not([disabled]) { background: var(--bg4); border-color: var(--border3); color: var(--text); }
+.q-opt:disabled { cursor: default; }
+
+/* Answer States */
+.q-opt.correct { background: var(--green-dim); border-color: var(--green); color: var(--green); font-weight: 500; }
+.q-opt.wrong { background: var(--red-dim); border-color: var(--red); color: var(--red); font-weight: 500; }
+.q-opt.reveal { border: 1px dashed var(--green); color: var(--green); font-weight: 500; }
+.q-explanation { margin-top: 16px; padding: 14px; background: var(--bg3); border-left: 3px solid var(--accent); border-radius: 4px 8px 8px 4px; font-size: 13px; color: var(--text2); line-height: 1.6; }
+
+/* Results Table */
 .results-topic-table { width:100%;border-collapse:collapse;font-size:13px;margin-top:1rem }
 .results-topic-table th { color:var(--text3);font-weight:500;padding:8px 10px;border-bottom:1px solid var(--border);text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.06em }
 .results-topic-table td { padding:8px 10px;border-bottom:1px solid var(--border) }
@@ -65,10 +90,8 @@
   </div>
 
   <div class="quiz-layout">
-    <!-- Course tabs -->
     <div class="course-tabs" id="quizCourseTabs"></div>
 
-    <!-- Filters -->
     <div class="quiz-filter-row" id="filterRow">
       <span style="font-size:12px;color:var(--text3)">Filter:</span>
       <button class="filter-pill active" data-filter="all" onclick="setFilter('all',this)">All</button>
@@ -81,21 +104,19 @@
         <button class="btn btn-ghost btn-sm" id="topicFilterBtn" onclick="toggleTopicDropdown()">📂 Topic ▾</button>
       </div>
     </div>
-    <div id="topicDropdown" style="display:none;margin-bottom:8px;padding:10px;background:var(--bg2);border:1px solid var(--border2);border-radius:8px">
+    <div id="topicDropdown" style="display:none;margin-bottom:12px;padding:12px;background:var(--bg2);border:1px solid var(--border2);border-radius:8px">
       <div id="topicFilterList" style="display:flex;gap:6px;flex-wrap:wrap"></div>
     </div>
 
-    <!-- Score bar -->
-    <div class="score-bar">
+    <div class="score-bar" style="margin-bottom: 24px">
       <span style="font-size:12px;font-weight:600" id="scoreLabel">Score</span>
       <div class="score-track"><div class="score-fill" id="scoreFill" style="width:0%"></div></div>
       <span style="font-family:var(--font-mono);font-size:14px;font-weight:600;color:var(--accent2)" id="scoreText">0 / 0</span>
     </div>
 
-    <!-- Body -->
     <div id="quizBody"></div>
 
-    <div class="quiz-controls" id="quizControls" style="display:none">
+    <div class="quiz-controls" id="quizControls" style="display:none; margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--border);">
       <button class="btn btn-primary"  onclick="showResults()">📊 See Results</button>
       <button class="btn btn-ghost"    onclick="restartQuiz()">↺ Restart</button>
       <button class="btn btn-ghost"    onclick="nextCourseQuiz()">Next course →</button>
@@ -191,15 +212,22 @@ function renderQuiz(courseId) {
     });
 
     const diffBadge = q.difficulty ? `<span class="q-difficulty ${q.difficulty}">${q.difficulty}</span>` : '';
-    const expHtml   = answered ? `<div class="q-explanation">${q._answered===q.ans?'<span style="color:var(--green)">✓ Correct.</span>':'<span style="color:var(--red)">✗ Incorrect.</span>'} ${q.exp||''}</div>` : '';
+    const expHtml   = answered ? `<div class="q-explanation">${q._answered===q.ans?'<strong style="color:var(--green)">✓ Correct.</strong>':'<strong style="color:var(--red)">✗ Incorrect.</strong>'} <span style="margin-left:4px">${q.exp||''}</span></div>` : '';
 
+    // The beautiful separation of Header & Question Text
     card.innerHTML = `
       <div class="q-card-header">
-        <div class="q-num">Q${qi+1} of ${_displayQuestions.length}${q.topic?` · ${q.topic}`:''}${diffBadge}</div>
+        <div class="q-num">
+          <span>Q${qi+1} of ${_displayQuestions.length}</span>
+          ${q.topic ? `<span style="color:var(--border3)">|</span> <span style="color:var(--text2)">📂 ${q.topic}</span>` : ''}
+          ${diffBadge ? `<span style="color:var(--border3)">|</span> ${diffBadge}` : ''}
+        </div>
         <button class="q-bookmark ${bookmarked?'active':''}" onclick="toggleBookmark('${courseId}',${globalIdx},this)" title="Bookmark">⭐</button>
       </div>
       <div class="q-text">${q.q}</div>
-      <div class="q-options">${optsHtml}</div>${expHtml}`;
+      <div class="q-options">${optsHtml}</div>
+      ${expHtml}`;
+      
     body.appendChild(card);
   });
 
