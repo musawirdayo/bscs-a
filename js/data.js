@@ -30,14 +30,30 @@ let _syncStatus = 'idle';
 async function saveData() {
   _syncStatus = 'saving'; _notifySyncStatus();
   try {
+    // We remove the fast-moving 'presence' data before saving to the main bin to save space!
+    const dataToSave = JSON.parse(JSON.stringify(APP_DATA));
+    delete dataToSave.presence;
+
     const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
       method:'PUT', headers:{'Content-Type':'application/json','X-Master-Key':MASTER_KEY},
-      body: JSON.stringify(APP_DATA)
+      body: JSON.stringify(dataToSave)
     });
-    _syncStatus = res.ok ? 'saved' : 'error';
-    if (res.ok) _toast('✅ Saved & deployed to all students.');
-    else        _toast('❌ Save failed.','error');
-  } catch(e) { _syncStatus='error'; _toast('❌ Network error.','error'); }
+    
+    if (res.ok) {
+      _syncStatus = 'saved';
+      _toast('✅ Saved & deployed to all students.');
+    } else {
+      const err = await res.json();
+      _syncStatus = 'error';
+      _toast('❌ Save failed.', 'error');
+      
+      // THIS WILL POP UP THE EXACT SERVER ERROR
+      alert("CLOUD ERROR:\n" + (err.message || res.statusText) + "\n\nIf it says 'Payload Too Large', your database is full (100KB limit).");
+    }
+  } catch(e) { 
+    _syncStatus='error'; 
+    _toast('❌ Network error.','error'); 
+  }
   _notifySyncStatus();
 }
 
