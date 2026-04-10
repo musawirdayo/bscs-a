@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Notes — BCS 3A</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&family=Lora:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/main.css">
+<style>
+/* Reading progress */
+#readingProgressBar { position:fixed;top:60px;left:0;right:0;height:3px;z-index:150;background:transparent;pointer-events:none }
+#readingProgressFill { height:100%;width:0%;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .1s }
+
+/* Immersive mode */
+body.immersive-mode .topnav { transform:translateY(-100%);transition:transform .3s }
+body.immersive-mode:hover .topnav { transform:translateY(0) }
+body.immersive-mode .notes-layout { margin-top:-60px }
+body.immersive-mode .sidebar { top:0;height:100vh }
+
+/* ToC floating */
+.toc-panel { position:fixed;right:20px;top:90px;width:200px;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:14px;font-size:12px;max-height:55vh;overflow-y:auto;z-index:50;display:none }
+.toc-panel.visible { display:block }
+.toc-title { font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:8px;font-weight:700 }
+.toc-item { display:block;padding:4px 0;color:var(--text2);cursor:pointer;transition:color .15s;line-height:1.4;border:none;background:none;text-align:left;width:100%;font-family:var(--font-body);font-size:12px }
+.toc-item:hover,.toc-item.active { color:var(--accent2) }
+.toc-item.h2 { padding-left:12px;font-size:11px }
+.toc-panel::-webkit-scrollbar { width:3px }
+.toc-panel::-webkit-scrollbar-thumb { background:var(--border2);border-radius:2px }
+
+/* AI Ask panel */
+.ai-ask-panel {
+  position:fixed;bottom:24px;right:24px;z-index:100;
+  background:var(--bg2);border:1px solid var(--border2);
+  border-radius:14px;padding:16px;width:320px;
+  box-shadow:0 20px 60px rgba(0,0,0,.6);
+  display:none;
+}
+.ai-ask-panel.visible { display:block;animation:slideUp .3s cubic-bezier(.16,1,.3,1) }
+@keyframes slideUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+.ai-ask-header { display:flex;justify-content:space-between;align-items:center;margin-bottom:12px }
+.ai-ask-title { font-size:13px;font-weight:700;color:var(--accent2) }
+.ai-ask-close { background:none;border:none;color:var(--text3);cursor:pointer;font-size:18px;line-height:1;padding:0 }
+.ai-ask-input { width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text);padding:9px 12px;font-family:var(--font-body);font-size:13px;outline:none;margin-bottom:8px;resize:none }
+.ai-ask-input:focus { border-color:var(--accent) }
+.ai-ask-response { font-size:13px;color:var(--text2);line-height:1.7;max-height:200px;overflow-y:auto;padding:10px;background:var(--bg3);border-radius:8px;display:none;margin-top:8px }
+.ai-fab {
+  position:fixed;bottom:24px;right:24px;z-index:99;
+  width:52px;height:52px;border-radius:50%;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  border:none;cursor:pointer;font-size:22px;
+  box-shadow:0 8px 24px rgba(108,99,255,.4);
+  transition:all .25s;display:flex;align-items:center;justify-content:center;
+  color:white;
+}
+.ai-fab:hover { transform:scale(1.1);box-shadow:0 12px 32px rgba(108,99,255,.5) }
+
+/* Highlight support */
+.note-highlight { background:rgba(245,158,11,.15);border-bottom:2px solid var(--amber);cursor:pointer;border-radius:2px;transition:background .2s }
+.note-highlight:hover { background:rgba(245,158,11,.25) }
+
+/* Inline quiz prompt */
+.inline-quiz-prompt {
+  margin:2rem 0;padding:1.25rem 1.5rem;
+  background:var(--accent-dim);border:1px solid rgba(108,99,255,.2);
+  border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap
+}
+.iqp-text { font-size:14px }
+.iqp-count { font-weight:700;color:var(--accent2) }
+
+/* Notes meta row */
+.note-meta-row {
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  padding:10px 2rem;border-bottom:1px solid var(--border);
+  font-size:12px;color:var(--text3);background:rgba(8,8,16,.5)
+}
+</style>
+</head>
+<body>
+<div class="noise"></div>
+<div id="readingProgressBar"><div id="readingProgressFill"></div></div>
+
+<nav class="topnav">
+  <div class="nav-brand">
+    <span class="brand-dot"></span>
+    <div><span class="brand-title">BCS 3A</span><span class="brand-sub">COMSATS University</span></div>
+  </div>
+  <div class="nav-links">
+    <a href="index.html" class="nav-link">Dashboard</a>
+    <a href="notes.html" class="nav-link active">Notes</a>
+    <a href="quiz.html"  class="nav-link">Quiz</a>
+    <a href="flashcards.html" class="nav-link">Flashcards</a>
+    <a href="admin.html" class="nav-link nav-admin">Admin</a>
+  </div>
+  <span class="sync-pill" id="syncStatus"></span>
+  <button class="hamburger" onclick="toggleMobileNav()">☰</button>
+</nav>
+<div class="mobile-nav" id="mobileNav">
+  <a href="index.html">Dashboard</a><a href="notes.html">Notes</a>
+  <a href="quiz.html">Quiz</a><a href="flashcards.html">Flashcards</a>
+  <a href="admin.html">Admin</a>
+</div>
+
+<main style="position:relative;z-index:1">
+  <div class="notes-layout" id="notesLayout">
+
+    <!-- Sidebar -->
+    <div class="sidebar" id="notesSidebar">
+      <div class="sidebar-title">Courses & Topics</div>
+      <input type="text" class="sidebar-search" id="sidebarSearch" placeholder="🔍 Search topics…" oninput="filterSidebar()">
+      <div id="courseList"><p style="font-size:12px;color:var(--text3);padding:8px 1rem">Loading…</p></div>
+    </div>
+
+    <!-- Reading pane -->
+    <div class="notes-reader" id="notesReader">
+      <!-- Toolbar injected here when note loads -->
+      <div class="notes-placeholder" id="notesPlaceholder">
+        <span class="big-icon">📖</span>
+        <h3>Select a topic to read</h3>
+        <p>Choose a course from the sidebar, then pick a topic.</p>
+        <p style="margin-top:8px;font-size:12px;color:var(--text3)">✅ = topics you've already read</p>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- Table of Contents panel -->
+<div class="toc-panel" id="tocPanel">
+  <div class="toc-title">Contents</div>
+  <div id="tocList"></div>
+</div>
+
+<!-- AI Ask FAB -->
+<button class="ai-fab" id="aiFab" onclick="toggleAskPanel()" title="Ask AI about this topic" style="display:none">✦</button>
+
+<!-- AI Ask Panel -->
+<div class="ai-ask-panel" id="aiAskPanel">
+  <div class="ai-ask-header">
+    <span class="ai-ask-title">✦ Ask AI about this topic</span>
+    <button class="ai-ask-close" onclick="toggleAskPanel()">✕</button>
+  </div>
+  <textarea class="ai-ask-input" id="aiAskInput" rows="2" placeholder="e.g. Can you explain this in simpler terms?"></textarea>
+  <div style="display:flex;gap:6px">
+    <button class="btn btn-primary btn-sm" style="flex:1" onclick="askAI()">Ask Gemini</button>
+    <button class="btn btn-ghost btn-sm" onclick="askAI('explain')">Explain</button>
+    <button class="btn btn-ghost btn-sm" onclick="askAI('summarize')">Summary</button>
+  </div>
+  <div class="ai-ask-response" id="aiAskResponse"></div>
+</div>
+
+<footer class="footer">
+  <p>BCS Section A · 3rd Semester · COMSATS University Islamabad</p>
+</footer>
+
+<div id="toast-container"></div>
+
+<script src="js/data.js"></script>
+<script>
+let _activeCourse = null;
+let _activeTopic  = null;
+let _currentNoteData = null;
+let _readSize = parseInt(localStorage.getItem('read_size') || '16');
+let _readMode = localStorage.getItem('read_mode') || 'normal';
+let _showToc = false;
+
+function onDataLoaded() { buildSidebar(); }
+
+// ── Sidebar ───────────────────────────────────────────────────────────────────
+function buildSidebar() {
+  const list = document.getElementById('courseList');
+  const preselect = new URLSearchParams(location.search).get('course');
+  list.innerHTML = '';
+
+  APP_DATA.courses.forEach(c => {
+    const notes   = APP_DATA.notes[c.id] || {};
+    const topics  = Object.keys(notes);
+    const readList = getReadList(c.id);
+    const readCount = readList.filter(t => topics.includes(t)).length;
+
+    const wrap = document.createElement('div');
+    wrap.style.marginBottom = '2px';
+
+    const btn = document.createElement('button');
+    btn.className = 'sidebar-btn';
+    btn.dataset.course = c.id;
+    const bar = topics.length ? `<div style="width:${Math.round((readCount/topics.length)*100)}%;height:2px;background:var(--c-${c.color},var(--accent));border-radius:1px;margin-top:3px"></div>` : '';
+    btn.innerHTML = `<div class="sidebar-btn-row"><span>${c.icon} ${c.short}</span><span style="font-size:10px;color:var(--text3)">${readCount}/${topics.length}</span></div>${bar}`;
+    btn.onclick = () => {
+      document.querySelectorAll('.sidebar-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      _activeCourse = c;
+      const sg = list.querySelector(`.topic-group[data-course="${c.id}"]`);
+      if (sg) sg.style.display = sg.style.display === 'none' ? '' : 'none';
+      if (!topics.length) showPlaceholder(c);
+    };
+    wrap.appendChild(btn);
+    list.appendChild(wrap);
+
+    const subWrap = document.createElement('div');
+    subWrap.className = 'topic-group';
+    subWrap.dataset.course = c.id;
+
+    topics.forEach(topic => {
+      const read = isRead(c.id, topic);
+      const sub = document.createElement('button');
+      sub.className = 'sidebar-sub' + (read ? ' topic-read' : '');
+      sub.dataset.topic = topic.toLowerCase();
+      sub.innerHTML = `<span style="flex:1;text-align:left">${topic}</span>${read ? '<span class="sidebar-read-dot"></span>' : ''}`;
+      sub.onclick = () => {
+        document.querySelectorAll('.sidebar-sub').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.sidebar-btn').forEach(b => b.classList.remove('active'));
+        sub.classList.add('active');
+        btn.classList.add('active');
+        _activeCourse = c;
+        _activeTopic  = topic;
+        renderNote(c, topic, APP_DATA.notes[c.id][topic]);
+      };
+      subWrap.appendChild(sub);
+    });
+    list.appendChild(subWrap);
+
+    if (preselect === c.id) {
+      btn.click();
+      if (topics.length > 0) subWrap.querySelector('.sidebar-sub')?.click();
+    }
+  });
+}
+
+function filterSidebar() {
+  const q = document.getElementById('sidebarSearch').value.toLowerCase();
+  document.querySelectorAll('.topic-group').forEach(grp => {
+    let anyVisible = false;
+    grp.querySelectorAll('.sidebar-sub').forEach(sub => {
+      const match = !q || sub.dataset.topic?.includes(q);
+      sub.style.display = match ? '' : 'none';
+      if (match) anyVisible = true;
+    });
+    const cId = grp.dataset.course;
+    const hdr = document.querySelector(`.sidebar-btn[data-course="${cId}"]`)?.parentElement;
+    if (hdr) hdr.style.display = anyVisible || !q ? '' : 'none';
+  });
+}
+
+function showPlaceholder(course) {
+  const reader = document.getElementById('notesReader');
+  reader.innerHTML = `<div class="notes-placeholder"><span class="big-icon">${course.icon}</span><h3>${course.short} notes coming soon</h3><p>No notes uploaded yet. Check back soon!</p></div>`;
+  document.getElementById('aiFab').style.display = 'none';
+  document.getElementById('tocPanel').classList.remove('visible');
+}
+
+// ── Render Note ───────────────────────────────────────────────────────────────
+function renderNote(course, topic, data) {
+  if (!data) { showPlaceholder(course); return; }
+  _currentNoteData = data;
+  _activeCourse = course;
+  _activeTopic  = topic;
+
+  const reader = document.getElementById('notesReader');
+  const read = isRead(course.id, topic);
+
+  // Reading toolbar
+  let toolbarHtml = `
+    <div class="reading-toolbar" id="readingToolbar">
+      <span class="tag tag-${course.color}">${course.short}</span>
+      <span class="rt-title">${topic}</span>
+      <div class="reading-controls">
+        <div class="font-ctrl">
+          <button onclick="changeFontSize(-1)">A−</button>
+          <span id="fontSizeLabel">${_readSize}px</span>
+          <button onclick="changeFontSize(1)">A+</button>
+        </div>
+        <button class="read-mode-btn ${_readMode==='normal'?'active':''}" onclick="setReadMode('normal')">Normal</button>
+        <button class="read-mode-btn ${_readMode==='focus'?'active':''}" onclick="setReadMode('focus')">Focus</button>
+        <button class="read-mode-btn" id="tocToggle" onclick="toggleToc()">Contents</button>
+        <button class="btn btn-ghost btn-sm" onclick="window.print()">🖨</button>
+        <button class="btn btn-ghost btn-sm" id="copyBtn" onclick="copyNote()">📋</button>
+        <button class="btn ${read?'btn-success':'btn-primary'} btn-sm" id="readToggleBtn" onclick="toggleRead('${course.id}','${topic}')">
+          ${read ? '✅ Done' : '○ Mark Read'}
+        </button>
+      </div>
+    </div>
+    <div class="note-meta-row">
+      <span>📚 ${course.name}</span>
+      <span>·</span>
+      <span>👤 ${course.teacher}</span>
+      <span>·</span>
+      <span>📅 Exam: ${formatDate(course.examDate)}</span>
+    </div>`;
+
+  // Build rich content
+  let contentHtml = '';
+
+  if (data.sections && data.sections.length) {
+    // AI-structured note (new format)
+    contentHtml = buildRichContent(data);
+  } else if (typeof data === 'string') {
+    // Legacy plain text — auto-parse basic structure
+    contentHtml = buildLegacyContent(data);
+  } else {
+    // Old format with points/formulas/tips
+    contentHtml = buildOldFormatContent(data);
+  }
+
+  // Resources for this topic
+  const courseRes = (APP_DATA.resources || {})[course.id] || [];
+  const topicRes = courseRes.filter(r => !r.topic || r.topic === topic);
+  let resourcesHtml = '';
+  if (topicRes.length) {
+    resourcesHtml = `<div style="margin:2rem 0;padding-top:1.5rem;border-top:1px solid var(--border)">
+      <h4 style="font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:10px">📎 Resources & Past Papers</h4>
+      <div class="resources-list">
+        ${topicRes.map(r => `<a href="${r.url}" target="_blank" class="resource-item">
+          <span class="resource-icon">${getResIcon(r.type)}</span>
+          <div><div class="resource-name">${r.title}</div><div class="resource-meta">${r.type.toUpperCase()} · Added ${new Date(r.uploadedAt).toLocaleDateString('en-PK',{month:'short',day:'numeric'})}</div></div>
+          <span class="resource-type">↗</span>
+        </a>`).join('')}
+      </div>
+    </div>`;
+  }
+
+  // Related quiz
+  const qCount = (APP_DATA.quizzes[course.id] || []).filter(q => q.topic === topic).length;
+  const fcCount = (APP_DATA.flashcards[course.id] || []).filter(f => f.topic === topic).length;
+  let relatedHtml = '';
+  if (qCount > 0 || fcCount > 0) {
+    relatedHtml = `<div class="inline-quiz-prompt">
+      <div>
+        ${qCount>0?`<span class="iqp-count">${qCount} MCQs</span> available`:''} 
+        ${qCount>0&&fcCount>0?' · ':''} 
+        ${fcCount>0?`<span class="iqp-count">${fcCount} flashcards</span> ready`:''}
+        <span class="iqp-text"> for this topic</span>
+      </div>
+      <div style="display:flex;gap:8px">
+        ${qCount>0?`<a href="quiz.html" class="btn btn-ghost btn-sm">Practice Quiz →</a>`:''}
+        ${fcCount>0?`<a href="flashcards.html" class="btn btn-ghost btn-sm">Flashcards →</a>`:''}
+      </div>
+    </div>`;
+  }
+
+  reader.innerHTML = toolbarHtml + `
+    <div class="reading-content mode-${_readMode}" id="readingContent" style="--read-size:${_readSize}px">
+      ${contentHtml}
+      ${resourcesHtml}
+      ${relatedHtml}
+    </div>`;
+
+  buildToc();
+  initReadingProgress();
+  document.getElementById('aiFab').style.display = 'flex';
+
+  // Mark as read after 30s of being on page
+  if (!read) setTimeout(() => {
+    if (_activeTopic === topic && _activeCourse?.id === course.id) {
+      markRead(course.id, topic);
+      const btn = document.getElementById('readToggleBtn');
+      if (btn) { btn.textContent = '✅ Done'; btn.className = 'btn btn-success btn-sm'; }
+      buildSidebar();
+      reactivateSidebar(course, topic);
+    }
+  }, 30000);
+}
+
+function buildRichContent(data) {
+  const sections = data.sections || [];
+  let html = '';
+
+  // Hero section
+  html += `<div class="note-hero">
+    <div class="note-hero-badge"><span class="tag tag-${_activeCourse.color}">${_activeCourse.short}</span></div>
+    <h1 class="note-hero-title">${data.title || _activeTopic}</h1>
+    ${data.summary ? `<div class="note-hero-summary">${data.summary}</div>` : ''}
+  </div>`;
+
+  sections.forEach(sec => {
+    switch(sec.type) {
+      case 'heading':
+        html += `<h2 class="note-h1" data-toc="${sec.heading||sec.content}">${sec.heading||sec.content}</h2>`;
+        break;
+      case 'subheading':
+        html += `<h3 class="note-h2" data-toc="${sec.heading||sec.content}">${sec.heading||sec.content}</h3>`;
+        break;
+      case 'paragraph':
+        html += `<p class="note-para">${sec.content}</p>`;
+        break;
+      case 'definition':
+        html += `<div class="note-definition"><div class="def-term">${sec.heading||'Definition'}</div><div class="def-body">${sec.content}</div></div>`;
+        break;
+      case 'formula':
+        html += `<div class="note-formula">${sec.content}</div>`;
+        break;
+      case 'example':
+        html += `<div class="note-example">${sec.content}</div>`;
+        break;
+      case 'tip':
+        html += `<div class="note-tip">${sec.content}</div>`;
+        break;
+      case 'keypoint':
+        html += `<div class="note-keypoint">${sec.content}</div>`;
+        break;
+      case 'list':
+        html += `<ul class="note-list">${(sec.items||[sec.content]).map(i=>`<li>${i}</li>`).join('')}</ul>`;
+        break;
+      default:
+        if (sec.content) html += `<p class="note-para">${sec.content}</p>`;
+    }
+  });
+
+  // Key terms
+  if (data.keyTerms && data.keyTerms.length) {
+    html += `<h2 class="note-h1">Key Terms</h2>
+      <div class="key-terms-grid">
+        ${data.keyTerms.map(kt => `<div class="key-term-card"><div class="kt-term">${kt.term}</div><div class="kt-def">${kt.definition}</div></div>`).join('')}
+      </div>`;
+  }
+
+  // Exam tips
+  if (data.examTips && data.examTips.length) {
+    html += `<div class="exam-tips-block"><h4>★ Exam Tips</h4><ul>${data.examTips.map(t=>`<li>${t}</li>`).join('')}</ul></div>`;
+  }
+
+  return html;
+}
+
+function buildLegacyContent(raw) {
+  const lines = raw.split('\n').filter(l => l.trim());
+  let html = `<div class="note-hero"><h1 class="note-hero-title">${_activeTopic}</h1></div>`;
+  lines.forEach(line => {
+    if (line.startsWith('##')) {
+      html += `<h3 class="note-h2">${line.replace(/^##\s*/,'')}</h3>`;
+    } else if (line.startsWith('#')) {
+      html += `<h2 class="note-h1">${line.replace(/^#\s*/,'')}</h2>`;
+    } else if (line.toLowerCase().startsWith('formula:')) {
+      html += `<div class="note-formula">${line.replace(/^formula:\s*/i,'')}</div>`;
+    } else if (line.toLowerCase().startsWith('tip:')) {
+      html += `<div class="note-tip">${line.replace(/^tip:\s*/i,'')}</div>`;
+    } else if (line.startsWith('-') || line.startsWith('•')) {
+      html += `<ul class="note-list"><li>${line.replace(/^[-•]\s*/,'')}</li></ul>`;
+    } else {
+      html += `<p class="note-para">${line}</p>`;
+    }
+  });
+  return html;
+}
+
+function buildOldFormatContent(data) {
+  let html = `<div class="note-hero"><h1 class="note-hero-title">${_activeTopic}</h1></div>`;
+  if (data.points?.length) {
+    html += `<h2 class="note-h1">Key Points</h2><ul class="note-list">${data.points.map(p=>`<li>${p}</li>`).join('')}</ul>`;
+  }
+  if (data.formulas?.length) {
+    html += `<h2 class="note-h1">Formulas & Rules</h2>`;
+    data.formulas.forEach(f => { html += `<div class="note-formula">${f}</div>`; });
+  }
+  if (data.tips?.length) {
+    html += `<div class="exam-tips-block"><h4>★ Exam Tips</h4><ul>${data.tips.map(t=>`<li>${t}</li>`).join('')}</ul></div>`;
+  }
+  if (data.extra) {
+    html += `<h2 class="note-h1">Additional Notes</h2><p class="note-para" style="line-height:1.9">${data.extra}</p>`;
+  }
+  return html;
+}
+
+// ── Table of Contents ─────────────────────────────────────────────────────────
+function buildToc() {
+  const list = document.getElementById('tocList');
+  list.innerHTML = '';
+  const headings = document.querySelectorAll('#readingContent [data-toc],.note-h1,.note-h2');
+  if (headings.length < 2) { document.getElementById('tocPanel').classList.remove('visible'); return; }
+  headings.forEach((el, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'toc-item' + (el.classList.contains('note-h2') ? ' h2' : '');
+    btn.textContent = el.dataset.toc || el.textContent.slice(0,40);
+    btn.onclick = () => { el.scrollIntoView({behavior:'smooth',block:'start'}); };
+    list.appendChild(btn);
+  });
+}
+
+function toggleToc() {
+  _showToc = !_showToc;
+  document.getElementById('tocPanel').classList.toggle('visible', _showToc);
+}
+
+// ── Reading progress ──────────────────────────────────────────────────────────
+function initReadingProgress() {
+  const reader = document.getElementById('notesReader');
+  const fill   = document.getElementById('readingProgressFill');
+  reader.addEventListener('scroll', () => {
+    const { scrollTop, scrollHeight, clientHeight } = reader;
+    const pct = Math.round((scrollTop / (scrollHeight - clientHeight)) * 100) || 0;
+    fill.style.width = pct + '%';
+  }, { passive: true });
+}
+
+// ── Font size & reading mode ──────────────────────────────────────────────────
+function changeFontSize(delta) {
+  _readSize = Math.max(13, Math.min(22, _readSize + delta));
+  localStorage.setItem('read_size', _readSize);
+  const rc = document.getElementById('readingContent');
+  if (rc) rc.style.setProperty('--read-size', _readSize + 'px');
+  const lbl = document.getElementById('fontSizeLabel');
+  if (lbl) lbl.textContent = _readSize + 'px';
+}
+
+function setReadMode(mode) {
+  _readMode = mode;
+  localStorage.setItem('read_mode', mode);
+  const rc = document.getElementById('readingContent');
+  if (rc) { rc.className = `reading-content mode-${mode}`; rc.style.setProperty('--read-size', _readSize + 'px'); }
+  document.querySelectorAll('.read-mode-btn').forEach(b => b.classList.toggle('active', b.textContent.toLowerCase() === mode));
+}
+
+// ── AI Ask ────────────────────────────────────────────────────────────────────
+function toggleAskPanel() {
+  const panel = document.getElementById('aiAskPanel');
+  const fab   = document.getElementById('aiFab');
+  const visible = panel.classList.toggle('visible');
+  fab.style.display = visible ? 'none' : 'flex';
+  if (visible) document.getElementById('aiAskInput').focus();
+}
+
+async function askAI(preset) {
+  if (!_activeTopic || !_currentNoteData) return showToast('Open a topic first', 'error');
+  const input = document.getElementById('aiAskInput');
+  const resp  = document.getElementById('aiAskResponse');
+
+  let question = input.value.trim();
+  if (preset === 'explain') question = `Explain the key concepts of "${_activeTopic}" in simple, clear terms for a student.`;
+  if (preset === 'summarize') question = `Give me a bullet-point summary of the 5 most important things to remember about "${_activeTopic}" for the exam.`;
+  if (!question) return showToast('Type a question first', 'error');
+
+  resp.style.display = 'block';
+  resp.innerHTML = '<div style="display:flex;align-items:center;gap:8px;color:var(--text3)"><div class="ai-spinner"></div> Asking Gemini…</div>';
+
+  const noteText = JSON.stringify(_currentNoteData).slice(0, 2000);
+  const prompt = `You are a helpful study assistant for a university CS student.
+Course: "${_activeCourse?.name || ''}"
+Topic: "${_activeTopic}"
+Note content summary: ${noteText}
+
+Student's question: "${question}"
+
+Give a clear, helpful answer in 2-5 sentences. If listing items, use bullet points with •. Be specific and exam-focused.`;
+
+  try {
+    const answer = await geminiAsk(prompt);
+    resp.innerHTML = answer
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      .replace(/^• /gm, '<br>• ')
+      .replace(/\n\n/g, '<br><br>')
+      .replace(/\n/g, '<br>');
+  } catch(e) {
+    resp.innerHTML = `❌ AI error: ${e.message}. Check your internet connection.`;
+    console.error('askAI error:', e);
+  }
+}
+
+// ── Actions ───────────────────────────────────────────────────────────────────
+function toggleRead(courseId, topic) {
+  isRead(courseId,topic) ? unmarkRead(courseId,topic) : markRead(courseId,topic);
+  const btn = document.getElementById('readToggleBtn');
+  const nowRead = isRead(courseId,topic);
+  if (btn) { btn.textContent = nowRead ? '✅ Done' : '○ Mark Read'; btn.className = `btn ${nowRead?'btn-success':'btn-primary'} btn-sm`; }
+  buildSidebar();
+  reactivateSidebar(_activeCourse, topic);
+}
+
+function reactivateSidebar(course, topic) {
+  if (!course) return;
+  document.querySelectorAll('.sidebar-btn').forEach(b => { if (b.dataset.course === course.id) b.classList.add('active'); });
+  document.querySelectorAll('.sidebar-sub').forEach(b => { if (b.dataset.topic === topic?.toLowerCase()) b.classList.add('active'); });
+}
+
+function copyNote() {
+  const content = document.getElementById('readingContent');
+  const text = content ? content.innerText.replace(/Print|Copy|Mark Read|Done|✅|○/g,'').trim() : '';
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copyBtn');
+    if (btn) { btn.textContent = '✓'; setTimeout(() => btn.textContent = '📋', 2000); }
+  });
+}
+
+function getResIcon(type) {
+  const map = { pdf:'📄', link:'🔗', video:'🎥', doc:'📝', pastpaper:'📋', slides:'📊' };
+  return map[type] || '📎';
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    document.getElementById('aiAskPanel').classList.remove('visible');
+    document.getElementById('aiFab').style.display = 'flex';
+    document.getElementById('tocPanel').classList.remove('visible');
+    _showToc = false;
+  }
+  if ((e.ctrlKey || e.metaKey) && e.key === '/') { e.preventDefault(); toggleAskPanel(); }
+});
+
+buildSidebar();
+</script>
+</body>
+</html>

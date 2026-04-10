@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — BCS 3A</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/main.css">
+<style>
+.stat-strip { display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:2rem }
+.stat-box { background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px 20px }
+.stat-num { font-family:var(--font-mono);font-size:26px;font-weight:700;color:var(--accent2) }
+.stat-lbl { font-size:11px;color:var(--text3);margin-top:2px;text-transform:uppercase;letter-spacing:.06em }
+.progress-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px }
+.prog-card { background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px }
+.prog-card-header { display:flex;justify-content:space-between;align-items:center;margin-bottom:10px }
+.prog-course { font-weight:600;font-size:13px }
+.prog-pct { font-family:var(--font-mono);font-size:12px;color:var(--text3) }
+.prog-bar { height:4px;background:var(--bg4);border-radius:2px;overflow:hidden }
+.prog-fill { height:100%;border-radius:2px;transition:width 1.2s cubic-bezier(.4,0,.2,1) }
+.study-streak { display:inline-flex;align-items:center;gap:6px;padding:5px 12px;background:var(--amber-dim);border:1px solid rgba(245,158,11,.2);border-radius:99px;font-size:12px;color:var(--amber) }
+.name-badge { display:inline-flex;align-items:center;gap:8px;padding:5px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:99px;font-size:12px;color:var(--text2);cursor:pointer;transition:all .2s }
+.name-badge:hover { border-color:var(--border3);color:var(--text) }
+</style>
+</head>
+<body>
+<div class="noise"></div>
+
+<nav class="topnav">
+  <div class="nav-brand">
+    <span class="brand-dot"></span>
+    <div><span class="brand-title">BCS 3A</span><span class="brand-sub">COMSATS University Islamabad</span></div>
+  </div>
+  <div class="nav-links">
+    <a href="index.html" class="nav-link active">Dashboard</a>
+    <a href="notes.html" class="nav-link">Notes</a>
+    <a href="quiz.html"  class="nav-link">Quiz</a>
+    <a href="flashcards.html" class="nav-link">Flashcards</a>
+    <a href="admin.html" class="nav-link nav-admin">Admin</a>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <span class="sync-pill" id="syncStatus"></span>
+    <span class="online-badge" id="onlineBadge" style="display:none"><span class="online-dot"></span><span id="onlineCount">1</span> online</span>
+  </div>
+  <button class="hamburger" onclick="toggleMobileNav()">☰</button>
+</nav>
+<div class="mobile-nav" id="mobileNav">
+  <a href="index.html">Dashboard</a><a href="notes.html">Notes</a>
+  <a href="quiz.html">Quiz</a><a href="flashcards.html">Flashcards</a>
+  <a href="admin.html">Admin</a>
+</div>
+
+<main class="main-container">
+
+  <!-- Announcements -->
+  <div id="announcementsZone"></div>
+
+  <!-- Hero -->
+  <section class="hero-section">
+    <div class="hero-text">
+      <p class="hero-eyebrow">Mid Exam Season · Spring 2026</p>
+      <h1 class="hero-heading">Your exams<br>start <span class="highlight" id="daysUntilFirst">—</span></h1>
+      <p class="hero-sub" style="margin-bottom:12px">5 courses. Real notes. Practice questions. All in one place.</p>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span class="study-streak" id="streakBadge">🔥 0 day streak</span>
+        <span class="name-badge" id="nameBadge" onclick="changeName()">👤 <span id="nameLabel">Student</span> ▾</span>
+      </div>
+    </div>
+    <div class="next-exam-card">
+      <p class="nec-label">⏱ Countdown to next exam</p>
+      <p class="nec-course" id="nextExamName">Loading…</p>
+      <p class="nec-teacher" id="nextExamTeacher"></p>
+      <div class="countdown-row">
+        <div class="cd-unit"><span class="cd-num" id="cd-d">0</span><span class="cd-lbl">days</span></div>
+        <div class="cd-sep">:</div>
+        <div class="cd-unit"><span class="cd-num" id="cd-h">00</span><span class="cd-lbl">hrs</span></div>
+        <div class="cd-sep">:</div>
+        <div class="cd-unit"><span class="cd-num" id="cd-m">00</span><span class="cd-lbl">min</span></div>
+        <div class="cd-sep">:</div>
+        <div class="cd-unit"><span class="cd-num" id="cd-s">00</span><span class="cd-lbl">sec</span></div>
+      </div>
+      <div class="nec-meta" id="nextExamMeta"></div>
+    </div>
+  </section>
+
+  <!-- Stats strip -->
+  <div class="stat-strip" id="statStrip">
+    <div class="stat-box"><div class="stat-num" id="st-topics">—</div><div class="stat-lbl">Topics Available</div></div>
+    <div class="stat-box"><div class="stat-num" id="st-read">—</div><div class="stat-lbl">Topics Read</div></div>
+    <div class="stat-box"><div class="stat-num" id="st-mcqs">—</div><div class="stat-lbl">MCQ Questions</div></div>
+    <div class="stat-box"><div class="stat-num" id="st-cards">—</div><div class="stat-lbl">Flashcards</div></div>
+    <div class="stat-box"><div class="stat-num" id="st-online">—</div><div class="stat-lbl">Online Now</div></div>
+  </div>
+
+  <!-- Exam Timeline -->
+  <section class="section">
+    <h2 class="section-title">📅 Exam Schedule</h2>
+    <div class="timeline" id="examTimeline"></div>
+  </section>
+
+  <!-- Courses -->
+  <section class="section">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;flex-wrap:wrap;gap:10px">
+      <h2 class="section-title" style="margin:0;border:none">📚 Courses</h2>
+      <input type="text" class="form-input" id="courseSearch" placeholder="🔍 Search…" oninput="filterCourses()" style="max-width:200px;border-radius:20px;font-size:13px;padding:7px 14px">
+    </div>
+    <div class="courses-grid" id="coursesGrid"></div>
+  </section>
+
+  <!-- Progress -->
+  <section class="section">
+    <h2 class="section-title">📊 Your Progress</h2>
+    <div class="progress-grid" id="progressGrid"></div>
+  </section>
+
+  <!-- Quick Actions -->
+  <section class="section">
+    <h2 class="section-title">⚡ Quick Actions</h2>
+    <div class="actions-grid">
+      <a href="notes.html" class="action-card"><span class="action-icon">📖</span><span class="action-title">Study Notes</span><span class="action-desc">Immersive reading with AI-structured content</span></a>
+      <a href="quiz.html"  class="action-card"><span class="action-icon">🎯</span><span class="action-title">Practice Quiz</span><span class="action-desc">AI-generated MCQs with instant explanations</span></a>
+      <a href="flashcards.html" class="action-card"><span class="action-icon">⚡</span><span class="action-title">Flashcards</span><span class="action-desc">Spaced-repetition style revision cards</span></a>
+      <a href="notes.html" class="action-card" id="continueCard" style="display:none"><span class="action-icon">▶</span><span class="action-title">Continue Reading</span><span class="action-desc" id="continueDesc"></span></a>
+    </div>
+  </section>
+
+</main>
+
+<footer class="footer">
+  <p>BCS Section A · 3rd Semester · COMSATS University Islamabad · Compiled by Musawir</p>
+</footer>
+<div id="toast-container"></div>
+
+<script src="js/data.js"></script>
+<script>
+// ── Name ──────────────────────────────────────────────────────────────────────
+function changeName() {
+  const n = prompt('Your name (shown in presence):', localStorage.getItem('bcs_name') || '');
+  if (n && n.trim()) {
+    localStorage.setItem('bcs_name', n.trim());
+    document.getElementById('nameLabel').textContent = n.trim();
+  }
+}
+document.getElementById('nameLabel').textContent = localStorage.getItem('bcs_name') || 'Student';
+
+// ── Streak ────────────────────────────────────────────────────────────────────
+function calcStreak() {
+  const key = 'bcs_streak';
+  const today = new Date().toDateString();
+  let data = JSON.parse(localStorage.getItem(key) || '{"last":"","count":0}');
+  const yesterday = new Date(Date.now()-86400000).toDateString();
+  if (data.last === today) return data.count;
+  if (data.last === yesterday) { data.count++; } else { data.count = 1; }
+  data.last = today;
+  localStorage.setItem(key, JSON.stringify(data));
+  return data.count;
+}
+document.getElementById('streakBadge').textContent = `🔥 ${calcStreak()} day streak`;
+
+// ── Continue last session ─────────────────────────────────────────────────────
+const lastCourse = localStorage.getItem('last_course');
+const lastTopic  = localStorage.getItem('last_topic');
+if (lastCourse && lastTopic) {
+  document.getElementById('continueCard').style.display = '';
+  document.getElementById('continueCard').href = `notes.html?course=${lastCourse}`;
+  document.getElementById('continueDesc').textContent = `${lastCourse.toUpperCase()} — ${lastTopic}`;
+}
+
+// ── Data loaded ───────────────────────────────────────────────────────────────
+function onDataLoaded() {
+  renderAnnouncements();
+  renderTimeline();
+  renderCourses();
+  renderProgress();
+  updateStats();
+  startCountdown();
+  updateOnlineDisplay();
+}
+
+// ── Announcements ─────────────────────────────────────────────────────────────
+function renderAnnouncements() {
+  const zone = document.getElementById('announcementsZone');
+  const dismissed = JSON.parse(localStorage.getItem('dismissed_ann') || '[]');
+  const anns = (APP_DATA.announcements || []).filter(a => !dismissed.includes(a.id));
+  if (!anns.length) { zone.innerHTML = ''; return; }
+  zone.innerHTML = anns.map(a => `
+    <div class="announcement ${a.type||'info'}" id="ann-${a.id}">
+      <div class="ann-body">
+        <strong>${a.type==='warning'?'⚠️':a.type==='success'?'✅':a.type==='danger'?'🔴':'📢'} ${a.msg}</strong>
+        <div class="ann-date">${new Date(a.date).toLocaleDateString('en-PK',{weekday:'short',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}</div>
+      </div>
+      <button class="ann-close" onclick="dismissAnn('${a.id}')" title="Dismiss">✕</button>
+    </div>`).join('');
+}
+
+function dismissAnn(id) {
+  const el = document.getElementById(`ann-${id}`);
+  if (el) { el.style.opacity='0'; el.style.transform='translateY(-8px)'; el.style.transition='all .25s'; setTimeout(()=>el.remove(),300); }
+  const dismissed = JSON.parse(localStorage.getItem('dismissed_ann') || '[]');
+  dismissed.push(id);
+  localStorage.setItem('dismissed_ann', JSON.stringify(dismissed));
+}
+
+// ── Timeline ──────────────────────────────────────────────────────────────────
+function renderTimeline() {
+  const tl  = document.getElementById('examTimeline');
+  const now = new Date();
+  tl.innerHTML = APP_DATA.courses.map(c => {
+    const d    = new Date(c.examDate);
+    const past = d < now;
+    const next = getNextExam()?.id === c.id;
+    const days = daysUntil(c.examDate);
+    return `<div class="tl-item ${past?'past':''} ${next?'next':''}">
+      <div class="tl-date">
+        <div style="font-size:13px;font-weight:600">${formatDate(c.examDate)}</div>
+        <div style="font-size:11px;color:var(--text3)">${formatTime(c.examDate)}</div>
+      </div>
+      <div>
+        <div class="tl-name">${c.icon} ${c.name}</div>
+        <div class="tl-room">${c.room} · ${c.teacher}</div>
+      </div>
+      <div class="tl-days" style="color:${past?'var(--text3)':days<=2?'var(--red)':days<=5?'var(--amber)':'var(--green)'}">
+        ${past ? 'Done' : `${days}d`}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Courses grid ──────────────────────────────────────────────────────────────
+function renderCourses() {
+  const grid = document.getElementById('coursesGrid');
+  const colorMap = { dld:'var(--c-dld)',se:'var(--c-se)',ds:'var(--c-ds)',calc:'var(--c-calc)',db:'var(--c-db)' };
+  grid.innerHTML = APP_DATA.courses.map(c => {
+    const topics = Object.keys(APP_DATA.notes[c.id] || {});
+    const read   = getReadList(c.id).filter(t => topics.includes(t)).length;
+    const pct    = topics.length ? Math.round((read/topics.length)*100) : 0;
+    const qCount = (APP_DATA.quizzes[c.id]||[]).length;
+    const color  = colorMap[c.color] || 'var(--accent)';
+    const days   = daysUntil(c.examDate);
+    return `<a href="notes.html?course=${c.id}" class="course-card" style="--card-accent:${color}" onclick="localStorage.setItem('last_course','${c.id}')">
+      <span class="cc-icon">${c.icon}</span>
+      <div class="cc-short">${c.short}</div>
+      <div class="cc-name">${c.name}</div>
+      <div class="cc-teacher">👤 ${c.teacher}</div>
+      <div class="cc-footer">
+        <span style="font-size:11px;color:var(--text3)">${read}/${topics.length} read · ${qCount} MCQs</span>
+        <span class="cc-exam-badge">${days>0?days+'d left':'Done'}</span>
+      </div>
+      <div class="cc-progress-bar"><div class="cc-progress-fill" style="width:${pct}%;background:${color}"></div></div>
+    </a>`;
+  }).join('');
+}
+
+function filterCourses() {
+  const q = document.getElementById('courseSearch').value.toLowerCase();
+  document.querySelectorAll('.course-card').forEach(card => {
+    card.style.display = card.textContent.toLowerCase().includes(q) ? '' : 'none';
+  });
+}
+
+// ── Progress ──────────────────────────────────────────────────────────────────
+function renderProgress() {
+  const grid = document.getElementById('progressGrid');
+  const colorMap = { dld:'#6c63ff',se:'#14b8a6',ds:'#22c55e',calc:'#f59e0b',db:'#ec4899' };
+  let totalTopics=0, totalRead=0;
+  const cards = APP_DATA.courses.map(c => {
+    const topics = Object.keys(APP_DATA.notes[c.id] || {});
+    const read   = getReadList(c.id).filter(t => topics.includes(t)).length;
+    const pct    = topics.length ? Math.round((read/topics.length)*100) : 0;
+    totalTopics += topics.length; totalRead += read;
+    const color  = colorMap[c.color] || '#6c63ff';
+    return `<div class="prog-card">
+      <div class="prog-card-header">
+        <span class="prog-course">${c.icon} ${c.short}</span>
+        <span class="prog-pct">${read}/${topics.length} <span style="color:${color}">${pct}%</span></span>
+      </div>
+      <div class="prog-bar"><div class="prog-fill" style="width:${pct}%;background:${color}"></div></div>
+    </div>`;
+  });
+  const overall = totalTopics ? Math.round((totalRead/totalTopics)*100) : 0;
+  grid.innerHTML = `<div class="prog-card" style="border-color:var(--border2)">
+    <div class="prog-card-header"><span class="prog-course">Overall Readiness</span><span class="prog-pct" style="color:var(--accent2);font-size:16px;font-family:var(--font-mono)">${overall}%</span></div>
+    <div class="prog-bar"><div class="prog-fill" style="width:${overall}%;background:linear-gradient(90deg,var(--accent),var(--accent2))"></div></div>
+  </div>` + cards.join('');
+}
+
+// ── Stats ─────────────────────────────────────────────────────────────────────
+function updateStats() {
+  let topics=0, read=0, mcqs=0, cards=0;
+  APP_DATA.courses.forEach(c => {
+    const t = Object.keys(APP_DATA.notes[c.id]||{});
+    topics += t.length;
+    read   += getReadList(c.id).filter(x => t.includes(x)).length;
+    mcqs   += (APP_DATA.quizzes[c.id]||[]).length;
+    cards  += (APP_DATA.flashcards[c.id]||[]).length;
+  });
+  document.getElementById('st-topics').textContent = topics;
+  document.getElementById('st-read').textContent   = read;
+  document.getElementById('st-mcqs').textContent   = mcqs;
+  document.getElementById('st-cards').textContent  = cards;
+  updateOnlineDisplay();
+}
+
+function updateOnlineDisplay() {
+  const n = getOnlineCount();
+  document.getElementById('st-online').textContent = n;
+  const badge = document.getElementById('onlineBadge');
+  badge.style.display = 'inline-flex';
+  document.getElementById('onlineCount').textContent = n;
+}
+
+// ── Countdown ─────────────────────────────────────────────────────────────────
+function startCountdown() {
+  const next = getNextExam();
+  if (!next) {
+    document.getElementById('nextExamName').textContent = 'All done!';
+    document.getElementById('daysUntilFirst').textContent = '😊';
+    return;
+  }
+  document.getElementById('nextExamName').textContent    = `${next.icon} ${next.short}`;
+  document.getElementById('nextExamTeacher').textContent = next.teacher;
+  document.getElementById('nextExamMeta').textContent    = `${next.room} · ${formatDate(next.examDate)}`;
+  const d = daysUntil(next.examDate);
+  document.getElementById('daysUntilFirst').textContent  = d <= 0 ? 'today!' : `in ${d} day${d!==1?'s':''}`;
+
+  function tick() {
+    const diff = new Date(next.examDate) - new Date();
+    if (diff <= 0) { clearInterval(iv); return; }
+    const days = Math.floor(diff/86400000);
+    const hrs  = Math.floor((diff%86400000)/3600000);
+    const mins = Math.floor((diff%3600000)/60000);
+    const secs = Math.floor((diff%60000)/1000);
+    document.getElementById('cd-d').textContent = days;
+    document.getElementById('cd-h').textContent = String(hrs).padStart(2,'0');
+    document.getElementById('cd-m').textContent = String(mins).padStart(2,'0');
+    document.getElementById('cd-s').textContent = String(secs).padStart(2,'0');
+  }
+  tick();
+  const iv = setInterval(tick, 1000);
+}
+
+onDataLoaded(); // in case data already loaded
+</script>
+</body>
+</html>

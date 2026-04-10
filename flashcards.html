@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Flashcards — BCS 3A</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/main.css">
+<style>
+.fc-topic-row { display:flex;gap:6px;flex-wrap:wrap;margin-bottom:0.75rem }
+.fc-topic-pill {
+  padding:4px 12px;background:var(--bg2);border:1px solid var(--border2);
+  border-radius:20px;font-size:12px;color:var(--text2);cursor:pointer;
+  font-family:var(--font-body);transition:all .2s
+}
+.fc-topic-pill:hover { border-color:var(--border3);color:var(--text) }
+.fc-topic-pill.active { background:var(--accent-dim);border-color:rgba(108,99,255,.4);color:var(--accent2) }
+
+.fc-session-complete {
+  text-align:center;padding:3rem 1.5rem;
+  background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);
+}
+.fc-session-complete .big-icon { font-size:52px;display:block;margin-bottom:1rem }
+
+.fc-hint-keys {
+  display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-top:8px;
+  font-size:11px;color:var(--text3)
+}
+.key-badge { background:var(--bg3);border:1px solid var(--border2);padding:2px 7px;border-radius:4px;font-family:var(--font-mono) }
+
+.fc-wrapper { user-select:none }
+
+/* Grid study mode */
+.fc-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px }
+.fc-grid-card {
+  background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px;cursor:pointer;transition:all .2s;min-height:100px
+}
+.fc-grid-card:hover { border-color:var(--border2);background:var(--bg3) }
+.fc-grid-card.flipped { background:var(--accent-dim);border-color:rgba(108,99,255,.3) }
+.fc-grid-q { font-size:13px;font-weight:600;margin-bottom:6px }
+.fc-grid-a { font-size:12px;color:var(--text2);display:none }
+.fc-grid-card.flipped .fc-grid-a { display:block }
+.fc-grid-card.flipped .fc-grid-q { color:var(--accent2) }
+</style>
+</head>
+<body>
+<div class="noise"></div>
+
+<nav class="topnav">
+  <div class="nav-brand">
+    <span class="brand-dot"></span>
+    <div><span class="brand-title">BCS 3A</span><span class="brand-sub">COMSATS University</span></div>
+  </div>
+  <div class="nav-links">
+    <a href="index.html" class="nav-link">Dashboard</a>
+    <a href="notes.html" class="nav-link">Notes</a>
+    <a href="quiz.html"  class="nav-link">Quiz</a>
+    <a href="flashcards.html" class="nav-link active">Flashcards</a>
+    <a href="admin.html" class="nav-link nav-admin">Admin</a>
+  </div>
+  <span class="sync-pill" id="syncStatus"></span>
+  <button class="hamburger" onclick="toggleMobileNav()">☰</button>
+</nav>
+<div class="mobile-nav" id="mobileNav">
+  <a href="index.html">Dashboard</a><a href="notes.html">Notes</a>
+  <a href="quiz.html">Quiz</a><a href="flashcards.html">Flashcards</a>
+  <a href="admin.html">Admin</a>
+</div>
+
+<main class="main-container">
+  <div style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:10px;margin-bottom:1.5rem">
+    <div class="page-header" style="margin:0">
+      <h1 class="page-title">Flashcards</h1>
+      <p class="page-sub">Tap to flip · Arrow keys to navigate · Rate to track mastery</p>
+    </div>
+    <div style="display:flex;gap:6px">
+      <button class="btn btn-ghost btn-sm" id="modeSwapBtn" onclick="toggleViewMode()">⊞ Grid Mode</button>
+    </div>
+  </div>
+
+  <div class="fc-layout">
+    <!-- Course tabs -->
+    <div class="course-tabs" id="fcCourseTabs"></div>
+
+    <!-- Topic filter -->
+    <div class="fc-topic-row" id="fcTopicRow"></div>
+
+    <!-- Stats -->
+    <div style="display:flex;gap:10px;margin-bottom:1rem;flex-wrap:wrap" id="fcStatsRow"></div>
+
+    <!-- Progress -->
+    <div class="fc-progress"><div class="fc-progress-fill" id="fcProgressFill" style="width:0%"></div></div>
+
+    <!-- Card view -->
+    <div id="fcCardView">
+      <div class="fc-wrapper" id="fcWrapper" onclick="flipCard()">
+        <div class="fc-inner" id="fcInner">
+          <div class="fc-face fc-front-face">
+            <p class="fc-hint">tap to flip · space bar</p>
+            <p class="fc-question" id="fcQuestion">Select a course to begin</p>
+            <p id="fcTopic" style="font-size:11px;color:var(--text3);margin-top:8px"></p>
+          </div>
+          <div class="fc-face fc-back-face">
+            <p class="fc-hint">answer</p>
+            <p class="fc-answer" id="fcAnswer"></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="fc-nav">
+        <button class="btn btn-ghost btn-sm" onclick="prevCard()">← Prev</button>
+        <span class="fc-counter" id="fcCounter">— / —</span>
+        <button class="btn btn-ghost btn-sm" onclick="nextCard()">Next →</button>
+      </div>
+
+      <div class="fc-rating" id="fcRating" style="display:none">
+        <button class="learn" onclick="rateCard('learning')">🔄 Still learning</button>
+        <button class="know"  onclick="rateCard('know')">✓ Got it!</button>
+      </div>
+
+      <div class="fc-hint-keys">
+        <span><span class="key-badge">←→</span> Navigate</span>
+        <span><span class="key-badge">Space</span> Flip</span>
+        <span><span class="key-badge">1</span> Learning</span>
+        <span><span class="key-badge">2</span> Got it</span>
+      </div>
+
+      <div style="display:flex;gap:8px;justify-content:center;margin-top:14px;flex-wrap:wrap">
+        <button class="btn btn-ghost btn-sm" onclick="shuffleCards()">🔀 Shuffle</button>
+        <button class="btn btn-ghost btn-sm" onclick="filterUnknown()" id="filterBtn">📌 Study unknowns</button>
+        <button class="btn btn-ghost btn-sm" onclick="resetSession()">↺ Reset session</button>
+      </div>
+    </div>
+
+    <!-- Grid view (hidden by default) -->
+    <div id="fcGridView" style="display:none">
+      <div class="fc-grid" id="fcGrid"></div>
+    </div>
+  </div>
+</main>
+
+<footer class="footer"><p>BCS Section A · 3rd Semester · COMSATS University Islamabad</p></footer>
+<div id="toast-container"></div>
+
+<script src="js/data.js"></script>
+<script>
+let activeCourseId = null;
+let allCards    = [];
+let currentCards= [];
+let currentIdx  = 0;
+let isFlipped   = false;
+let ratings     = {};
+let filterMode  = false;
+let viewMode    = 'card'; // 'card' | 'grid'
+let _activeTopic = 'all';
+
+function onDataLoaded() {
+  document.getElementById('fcCourseTabs').innerHTML = '';
+  initFC();
+}
+
+function initFC() {
+  if (document.getElementById('fcCourseTabs').children.length > 0) return;
+  APP_DATA.courses.forEach((c,i) => {
+    const btn = document.createElement('button');
+    btn.className = 'ctab' + (i===0?' active':'');
+    const count = (APP_DATA.flashcards[c.id]||[]).length;
+    btn.innerHTML = `${c.short} <span style="font-size:10px;opacity:.5">${count}</span>`;
+    btn.onclick = () => {
+      document.querySelectorAll('.ctab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      _activeTopic = 'all';
+      loadCourse(c.id);
+    };
+    document.getElementById('fcCourseTabs').appendChild(btn);
+  });
+  loadCourse(APP_DATA.courses[0].id);
+}
+
+function loadCourse(id) {
+  activeCourseId = id;
+  allCards   = [...(APP_DATA.flashcards[id]||[])];
+  buildTopicFilter(id);
+  applyTopicFilter();
+}
+
+function buildTopicFilter(id) {
+  const qs = APP_DATA.flashcards[id] || [];
+  const topics = [...new Set(qs.map(f => f.topic).filter(Boolean))];
+  const row = document.getElementById('fcTopicRow');
+  row.innerHTML = '';
+  if (!topics.length) return;
+  const allBtn = document.createElement('button');
+  allBtn.className = 'fc-topic-pill active'; allBtn.textContent = 'All Topics';
+  allBtn.onclick = () => { _activeTopic='all'; document.querySelectorAll('.fc-topic-pill').forEach(p=>p.classList.toggle('active',p.textContent==='All Topics')); applyTopicFilter(); };
+  row.appendChild(allBtn);
+  topics.forEach(t => {
+    const btn = document.createElement('button');
+    btn.className = 'fc-topic-pill'; btn.textContent = t;
+    btn.onclick = () => { _activeTopic=t; document.querySelectorAll('.fc-topic-pill').forEach(p=>p.classList.toggle('active',p.textContent===t)); applyTopicFilter(); };
+    row.appendChild(btn);
+  });
+}
+
+function applyTopicFilter() {
+  currentCards = _activeTopic === 'all' ? [...allCards] : allCards.filter(c => c.topic === _activeTopic);
+  currentIdx = 0; isFlipped = false; filterMode = false; ratings = {};
+  document.getElementById('filterBtn').textContent = '📌 Study unknowns';
+  renderCard();
+  renderStats();
+  if (viewMode === 'grid') renderGrid();
+}
+
+function renderCard() {
+  const wrapper = document.getElementById('fcWrapper');
+  wrapper.classList.remove('flipped');
+  document.getElementById('fcRating').style.display = 'none';
+  isFlipped = false;
+
+  if (!currentCards.length) {
+    document.getElementById('fcQuestion').textContent = filterMode ? '🎉 All unknowns reviewed!' : 'No flashcards yet for this course.';
+    document.getElementById('fcAnswer').textContent   = '';
+    document.getElementById('fcCounter').textContent  = '0 / 0';
+    document.getElementById('fcProgressFill').style.width = '0%';
+    document.getElementById('fcTopic').textContent = '';
+    return;
+  }
+  const card = currentCards[currentIdx];
+  document.getElementById('fcQuestion').textContent = card.q;
+  document.getElementById('fcAnswer').textContent   = card.a;
+  document.getElementById('fcTopic').textContent    = card.topic ? `📂 ${card.topic}` : '';
+  document.getElementById('fcCounter').textContent  = `${currentIdx+1} / ${currentCards.length}`;
+  const pct = Math.round(((currentIdx+1)/currentCards.length)*100);
+  document.getElementById('fcProgressFill').style.width = pct + '%';
+}
+
+function renderGrid() {
+  const grid = document.getElementById('fcGrid');
+  grid.innerHTML = currentCards.map((card, i) => `
+    <div class="fc-grid-card" id="gc-${i}" onclick="this.classList.toggle('flipped')">
+      <div class="fc-grid-q">${card.q}</div>
+      <div class="fc-grid-a">${card.a}</div>
+      ${card.topic ? `<div style="font-size:10px;color:var(--text3);margin-top:6px;border-top:1px solid var(--border);padding-top:6px">${card.topic}</div>` : ''}
+    </div>`).join('');
+}
+
+function flipCard() {
+  isFlipped = !isFlipped;
+  document.getElementById('fcWrapper').classList.toggle('flipped', isFlipped);
+  if (isFlipped) document.getElementById('fcRating').style.display = 'flex';
+}
+
+function rateCard(rating) {
+  const globalIdx = allCards.indexOf(currentCards[currentIdx]);
+  ratings[globalIdx] = rating;
+  renderStats();
+  nextCard();
+}
+
+function nextCard() {
+  if (!currentCards.length) return;
+  currentIdx = (currentIdx+1) % currentCards.length;
+  renderCard();
+}
+function prevCard() {
+  if (!currentCards.length) return;
+  currentIdx = (currentIdx-1+currentCards.length) % currentCards.length;
+  renderCard();
+}
+
+function shuffleCards() {
+  for (let i=currentCards.length-1;i>0;i--) {
+    const j=Math.floor(Math.random()*(i+1));
+    [currentCards[i],currentCards[j]]=[currentCards[j],currentCards[i]];
+  }
+  currentIdx=0; renderCard();
+  if (viewMode==='grid') renderGrid();
+}
+
+function filterUnknown() {
+  filterMode = !filterMode;
+  document.getElementById('filterBtn').textContent = filterMode ? '📚 Show all' : '📌 Study unknowns';
+  if (filterMode) currentCards = allCards.filter((_,i) => ratings[i] !== 'know');
+  else currentCards = _activeTopic==='all' ? [...allCards] : allCards.filter(c=>c.topic===_activeTopic);
+  currentIdx=0; renderCard();
+  if (viewMode==='grid') renderGrid();
+}
+
+function resetSession() { ratings={}; applyTopicFilter(); showToast('Session reset!'); }
+
+function toggleViewMode() {
+  viewMode = viewMode==='card' ? 'grid' : 'card';
+  document.getElementById('fcCardView').style.display = viewMode==='card' ? '' : 'none';
+  document.getElementById('fcGridView').style.display = viewMode==='grid' ? '' : 'none';
+  document.getElementById('modeSwapBtn').textContent  = viewMode==='card' ? '⊞ Grid Mode' : '≡ Card Mode';
+  if (viewMode==='grid') renderGrid();
+}
+
+function renderStats() {
+  const know     = Object.values(ratings).filter(r=>r==='know').length;
+  const learning = Object.values(ratings).filter(r=>r==='learning').length;
+  const unrated  = allCards.length - know - learning;
+  const pct      = allCards.length ? Math.round((know/allCards.length)*100) : 0;
+  document.getElementById('fcStatsRow').innerHTML = `
+    <span style="font-size:12px;color:var(--green);background:var(--green-dim);border:1px solid rgba(34,197,94,.2);padding:4px 10px;border-radius:20px">✓ Got it: ${know}</span>
+    <span style="font-size:12px;color:var(--amber);background:var(--amber-dim);border:1px solid rgba(245,158,11,.2);padding:4px 10px;border-radius:20px">🔄 Learning: ${learning}</span>
+    <span style="font-size:12px;color:var(--text3);background:var(--bg2);border:1px solid var(--border);padding:4px 10px;border-radius:20px">○ Unrated: ${unrated}</span>
+    ${pct>=80?`<span style="font-size:12px;color:var(--accent2);background:var(--accent-dim);border:1px solid rgba(108,99,255,.2);padding:4px 10px;border-radius:20px">🔥 ${pct}% mastered!</span>`:''}`;
+}
+
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  if (e.key==='ArrowRight') nextCard();
+  else if (e.key==='ArrowLeft') prevCard();
+  else if (e.key===' ') { e.preventDefault(); flipCard(); }
+  else if (e.key==='1' && isFlipped) rateCard('learning');
+  else if (e.key==='2' && isFlipped) rateCard('know');
+});
+
+initFC();
+</script>
+</body>
+</html>
