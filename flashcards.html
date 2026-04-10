@@ -7,42 +7,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/main.css">
-<style>
-.fc-topic-row { display:flex;gap:6px;flex-wrap:wrap;margin-bottom:0.75rem }
-.fc-topic-pill {
-  padding:4px 12px;background:var(--bg2);border:1px solid var(--border2);
-  border-radius:20px;font-size:12px;color:var(--text2);cursor:pointer;
-  font-family:var(--font-body);transition:all .2s
-}
-.fc-topic-pill:hover { border-color:var(--border3);color:var(--text) }
-.fc-topic-pill.active { background:var(--accent-dim);border-color:rgba(108,99,255,.4);color:var(--accent2) }
-
-.fc-session-complete {
-  text-align:center;padding:3rem 1.5rem;
-  background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);
-}
-.fc-session-complete .big-icon { font-size:52px;display:block;margin-bottom:1rem }
-
-.fc-hint-keys {
-  display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-top:8px;
-  font-size:11px;color:var(--text3)
-}
-.key-badge { background:var(--bg3);border:1px solid var(--border2);padding:2px 7px;border-radius:4px;font-family:var(--font-mono) }
-
-.fc-wrapper { user-select:none }
-
-/* Grid study mode */
-.fc-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px }
-.fc-grid-card {
-  background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px;cursor:pointer;transition:all .2s;min-height:100px
-}
-.fc-grid-card:hover { border-color:var(--border2);background:var(--bg3) }
-.fc-grid-card.flipped { background:var(--accent-dim);border-color:rgba(108,99,255,.3) }
-.fc-grid-q { font-size:13px;font-weight:600;margin-bottom:6px }
-.fc-grid-a { font-size:12px;color:var(--text2);display:none }
-.fc-grid-card.flipped .fc-grid-a { display:block }
-.fc-grid-card.flipped .fc-grid-q { color:var(--accent2) }
-</style>
 </head>
 <body>
 <div class="noise"></div>
@@ -68,7 +32,7 @@
   <a href="admin.html">Admin</a>
 </div>
 
-<main class="main-container">
+<main class="wrap" style="padding-top:1.5rem;padding-bottom:1rem">
   <div style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:10px;margin-bottom:1.5rem">
     <div class="page-header" style="margin:0">
       <h1 class="page-title">Flashcards</h1>
@@ -80,50 +44,45 @@
   </div>
 
   <div class="fc-layout">
-    <!-- Course tabs -->
     <div class="course-tabs" id="fcCourseTabs"></div>
 
-    <!-- Topic filter -->
     <div class="fc-topic-row" id="fcTopicRow"></div>
 
-    <!-- Stats -->
     <div style="display:flex;gap:10px;margin-bottom:1rem;flex-wrap:wrap" id="fcStatsRow"></div>
 
-    <!-- Progress -->
-    <div class="fc-progress"><div class="fc-progress-fill" id="fcProgressFill" style="width:0%"></div></div>
+    <div class="fc-prog"><div class="fc-prog-fill" id="fcProgressFill" style="width:0%"></div></div>
 
-    <!-- Card view -->
     <div id="fcCardView">
-      <div class="fc-wrapper" id="fcWrapper" onclick="flipCard()">
+      <div class="fc-wrap" id="fcWrapper" onclick="flipCard()">
         <div class="fc-inner" id="fcInner">
-          <div class="fc-face fc-front-face">
+          <div class="fc-face">
             <p class="fc-hint">tap to flip · space bar</p>
-            <p class="fc-question" id="fcQuestion">Select a course to begin</p>
+            <p class="fc-q" id="fcQuestion">Select a course to begin</p>
             <p id="fcTopic" style="font-size:11px;color:var(--text3);margin-top:8px"></p>
           </div>
-          <div class="fc-face fc-back-face">
+          <div class="fc-face fc-back">
             <p class="fc-hint">answer</p>
-            <p class="fc-answer" id="fcAnswer"></p>
+            <p class="fc-a" id="fcAnswer"></p>
           </div>
         </div>
       </div>
 
       <div class="fc-nav">
         <button class="btn btn-ghost btn-sm" onclick="prevCard()">← Prev</button>
-        <span class="fc-counter" id="fcCounter">— / —</span>
+        <span class="fc-ctr" id="fcCounter">— / —</span>
         <button class="btn btn-ghost btn-sm" onclick="nextCard()">Next →</button>
       </div>
 
-      <div class="fc-rating" id="fcRating" style="display:none">
-        <button class="learn" onclick="rateCard('learning')">🔄 Still learning</button>
-        <button class="know"  onclick="rateCard('know')">✓ Got it!</button>
+      <div class="fc-rate" id="fcRating" style="display:none">
+        <button class="fc-learn" onclick="rateCard('learning')">🔄 Still learning</button>
+        <button class="fc-know"  onclick="rateCard('know')">✓ Got it!</button>
       </div>
 
-      <div class="fc-hint-keys">
-        <span><span class="key-badge">←→</span> Navigate</span>
-        <span><span class="key-badge">Space</span> Flip</span>
-        <span><span class="key-badge">1</span> Learning</span>
-        <span><span class="key-badge">2</span> Got it</span>
+      <div class="key-hint">
+        <span><span class="kbd">←→</span> Navigate</span>
+        <span><span class="kbd">Space</span> Flip</span>
+        <span><span class="kbd">1</span> Learning</span>
+        <span><span class="kbd">2</span> Got it</span>
       </div>
 
       <div style="display:flex;gap:8px;justify-content:center;margin-top:14px;flex-wrap:wrap">
@@ -133,7 +92,6 @@
       </div>
     </div>
 
-    <!-- Grid view (hidden by default) -->
     <div id="fcGridView" style="display:none">
       <div class="fc-grid" id="fcGrid"></div>
     </div>
