@@ -154,76 +154,20 @@ function _notifySyncStatus() {
 }
 
 // ─── Gemini AI ───────────────────────────────────────────────────────────────
-async function geminiAsk(prompt) {
-  const key = getGeminiKey();
-  if (!key) throw new Error('No Gemini API key set. Go to aistudio.google.com to get one.');
-
-  // 2026 Model Priority: 3.1 Flash-Lite is the current cost/speed champion.
-  // gemini-2.0 models are being shut down June 1, 2026.
-  const MODELS = [
-    'gemini-3.1-flash-lite-preview', 
-    'gemini-3-flash-preview', 
-    'gemini-2.5-flash'
-  ];
-
-  let lastErr = 'Unknown';
-
-  for (const model of MODELS) {
-    try {
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${key}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature: 0.7,
-            maxOutputTokens: 2048
-          }
-        })
-      });
-
-      // Specific 2026 Quota Logic
-      if (res.status === 429) {
-        const errorData = await res.json().catch(() => ({}));
-        const msg = errorData.error?.message || '';
-        
-        if (msg.includes('limit: 0')) {
-          throw new Error('PROJECT_LOCKED: Your project has a 0 quota limit. You MUST link a billing account or create a new project in AI Studio to unlock the 2026 Free Tier.');
-        }
-        lastErr = `Rate limit exceeded for ${model}.`;
-        continue;
-      }
-
-      if (res.status === 404) {
-        lastErr = `Model ${model} not available or deprecated.`;
-        continue;
-      }
-
-      if (!res.ok) {
-        const e = await res.json().catch(() => ({}));
-        lastErr = e.error?.message || `HTTP ${res.status}`;
-        if (res.status === 400 || res.status === 403) throw new Error(lastErr);
-        continue;
-      }
-
-      const data = await res.json();
-      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-      
-      if (!text) {
-        lastErr = 'Empty response (Check safety filters in AI Studio).';
-        continue;
-      }
-
-      return text;
-    } catch (e) {
-      // If it's the project lock error, don't bother trying other models
-      if (e.message.includes('PROJECT_LOCKED')) throw e;
-      
-      lastErr = e.message;
-      continue;
-    }
-  }
-  throw new Error(`All models failed. Last error: ${lastErr}`);
+async function testGemini() {
+  const key = 'YOUR_NEW_KEY_HERE';
+  const model = 'gemini-3.1-flash-lite-preview'; // The current 2026 free-tier workhorse
+  
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${key}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: "hi" }] }]
+    })
+  });
+  
+  const data = await response.json();
+  console.log(data);
 }
 // ─── Markdown → HTML renderer ─────────────────────────────────────────────────
 function renderMarkdown(md) {
