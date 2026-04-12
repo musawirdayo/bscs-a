@@ -199,6 +199,9 @@ async function testGemini() {
         console.log("Test Success:", res);
     } catch(e) { console.error("Test Failed:", e); }
 }
+
+function getGeminiKey() { return localStorage.getItem('gemini_api_key') || ''; }
+
 // ─── Markdown → HTML renderer ─────────────────────────────────────────────────
 function renderMarkdown(md) {
   if (!md) return '';
