@@ -154,40 +154,64 @@ function _notifySyncStatus() {
 }
 
 // ─── Gemini AI ───────────────────────────────────────────────────────────────
-function getGeminiKey() { return localStorage.getItem('gemini_api_key') || ''; }
-
 async function geminiAsk(prompt) {
   const key = getGeminiKey();
-  if (!key) throw new Error('No Gemini API key set. Go to aistudio.google.com/app/apikey to get a free key, then paste it in Admin → Settings.');
+  if (!key) throw new Error('No Gemini API key set.');
 
-  const MODELS = ['gemini-2.0-flash-lite','gemini-1.5-flash','gemini-2.0-flash'];
+  // Updated 2026 Model IDs
+  const MODELS = [
+    'gemini-3.1-flash-lite-preview', // Most efficient (released March 2026)
+    'gemini-3-flash-preview',       // Standard high-speed
+    'gemini-2.5-flash'              // Stable fallback
+  ];
+
   let lastErr = 'Unknown';
 
   for (const model of MODELS) {
     try {
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,{
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ contents:[{parts:[{text:prompt}]}], generationConfig:{temperature:0.6,maxOutputTokens:1024} })
+      // Note: Using v1 for stability, or v1beta for newest features
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${key}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.6,
+            maxOutputTokens: 2048 // Gemini 3 supports much higher output limits
+          }
+        })
       });
-      if (res.status===404) { lastErr=`Model ${model} not available`; continue; }
-      if (!res.ok) {
-        const e = await res.json().catch(()=>({}));
-        lastErr = (e.error&&e.error.message)||`HTTP ${res.status}`;
-        if (res.status===400||res.status===403) throw new Error(lastErr);
+
+      if (res.status === 404) {
+        lastErr = `Model ${model} not available`;
         continue;
       }
+
+      if (!res.ok) {
+        const e = await res.json().catch(() => ({}));
+        lastErr = (e.error && e.error.message) || `HTTP ${res.status}`;
+        // Immediately fail on auth or permission errors
+        if (res.status === 400 || res.status === 403) throw new Error(lastErr);
+        continue;
+      }
+
       const data = await res.json();
       const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!text) { lastErr='Empty response'; continue; }
+      
+      if (!text) {
+        lastErr = 'Empty response (likely safety filter triggered)';
+        continue;
+      }
+
       return text;
-    } catch(e) {
-      if (e.message===lastErr) throw e; 
-      lastErr = e.message; continue;
+    } catch (e) {
+      if (e.message === lastErr) throw e;
+      lastErr = e.message;
+      continue;
     }
   }
-  throw new Error(lastErr);
+  throw new Error(`All models failed. Last error: ${lastErr}`);
 }
-
 // ─── Markdown → HTML renderer ─────────────────────────────────────────────────
 function renderMarkdown(md) {
   if (!md) return '';
