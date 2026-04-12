@@ -154,20 +154,50 @@ function _notifySyncStatus() {
 }
 
 // ─── Gemini AI ───────────────────────────────────────────────────────────────
+// ─── Gemini AI (2026 Updated) ────────────────────────────────────────────────
+async function geminiAsk(prompt) {
+  const key = getGeminiKey(); // Ensure your getGeminiKey() function exists
+  if (!key || key === 'YOUR_NEW_KEY_HERE') {
+    throw new Error('API Key missing. Please set your key in Settings.');
+  }
+
+  // Gemini 3.1 Flash-Lite is the current standard for Spring 2026
+  const model = 'gemini-3.1-flash-lite-preview'; 
+  
+  try {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${key}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.7, maxOutputTokens: 2048 }
+      })
+    });
+    
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error?.message || 'API Error');
+    }
+
+    const data = await response.json();
+    const result = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    
+    if (!result) throw new Error('AI returned an empty response.');
+    return result;
+
+  } catch (error) {
+    console.error("Gemini Error:", error);
+    _toast("AI Error: " + error.message, "error");
+    throw error;
+  }
+}
+
+// Keep this for manual console testing if you want
 async function testGemini() {
-  const key = 'YOUR_NEW_KEY_HERE';
-  const model = 'gemini-3.1-flash-lite-preview'; // The current 2026 free-tier workhorse
-  
-  const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${key}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: "hi" }] }]
-    })
-  });
-  
-  const data = await response.json();
-  console.log(data);
+    try {
+        const res = await geminiAsk("Hi");
+        console.log("Test Success:", res);
+    } catch(e) { console.error("Test Failed:", e); }
 }
 // ─── Markdown → HTML renderer ─────────────────────────────────────────────────
 function renderMarkdown(md) {
