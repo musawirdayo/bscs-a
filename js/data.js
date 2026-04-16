@@ -142,7 +142,7 @@ async function _pingPresence() {
 }
 
 setInterval(_pingPresence, 90000);
-function getOnlineCount() { const n=Date.now(); return (Object.values(APP_DATA.presence||{}).filter(p=>n-p.ts<180000).length) + 12; }
+function getOnlineCount() { const n=Date.now(); return (Object.values(APP_DATA.presence||{}).filter(p=>n-p.ts<180000).length); }
 
 // ─── Sync status pill ─────────────────────────────────────────────────────────
 function _notifySyncStatus() {
